@@ -1,0 +1,3 @@
+plugins { kotlin("jvm") }
+
+dependencies { api(project(":domain-model")) }

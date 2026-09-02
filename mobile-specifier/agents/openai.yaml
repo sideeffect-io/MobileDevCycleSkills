@@ -1,0 +1,6 @@
+interface:
+  display_name: "Mobile Specifier"
+  short_description: "Native mobile implementation readiness gate"
+  default_prompt: "Use $mobile-specifier to inspect this native mobile repository and refine my implementation request until it is SPEC_READY."
+policy:
+  allow_implicit_invocation: false

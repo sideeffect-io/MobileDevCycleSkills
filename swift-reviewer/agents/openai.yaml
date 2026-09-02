@@ -1,0 +1,6 @@
+interface:
+  display_name: "Swift Reviewer"
+  short_description: "Evidence-based, proportionate Swift review"
+  default_prompt: "Use $swift-reviewer to independently verify Swift changes and route a lifecycle transition only when applicable."
+policy:
+  allow_implicit_invocation: true

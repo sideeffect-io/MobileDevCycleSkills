@@ -1,0 +1,12 @@
+<resources>
+    <string name="profile_preparing">Preparing profile</string>
+    <string name="profile_prompt">Load this profile when you are ready.</string>
+    <string name="profile_load">Load profile</string>
+    <string name="profile_loading">Loading profile</string>
+    <string name="profile_reload">Reload profile</string>
+    <string name="profile_retry">Retry</string>
+    <string name="profile_error_not_found">Profile not found.</string>
+    <string name="profile_error_identity">The server returned a different profile.</string>
+    <string name="profile_error_malformed">The profile response was invalid.</string>
+    <string name="profile_error_unavailable">The profile service is unavailable.</string>
+</resources>

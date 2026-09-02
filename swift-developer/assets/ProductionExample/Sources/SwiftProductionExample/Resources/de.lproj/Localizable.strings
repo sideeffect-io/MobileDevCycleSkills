@@ -1,0 +1,6 @@
+"trip.distance" = "Strecke (km)";
+"trip.error.invalid" = "Gib eine gültige Strecke ein.";
+"trip.error.missing" = "Gib eine Strecke ein.";
+"trip.error.positive" = "Die Strecke muss größer als null sein.";
+"trip.note" = "Notiz";
+"trip.save" = "Fahrt speichern";

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kotlin Architect"
+  short_description: "Android architecture, boundaries, and workflows"
+  default_prompt: "Use $kotlin-architect to resolve Kotlin Android architecture and emit a KOTLIN-HANDOFF/1 transition only when a lifecycle requires one."
+policy:
+  allow_implicit_invocation: true

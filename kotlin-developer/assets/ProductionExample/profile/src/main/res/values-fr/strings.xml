@@ -1,0 +1,12 @@
+<resources>
+    <string name="profile_preparing">Préparation du profil</string>
+    <string name="profile_prompt">Chargez ce profil lorsque vous êtes prêt.</string>
+    <string name="profile_load">Charger le profil</string>
+    <string name="profile_loading">Chargement du profil</string>
+    <string name="profile_reload">Recharger le profil</string>
+    <string name="profile_retry">Réessayer</string>
+    <string name="profile_error_not_found">Profil introuvable.</string>
+    <string name="profile_error_identity">Le serveur a renvoyé un autre profil.</string>
+    <string name="profile_error_malformed">La réponse du profil est invalide.</string>
+    <string name="profile_error_unavailable">Le service de profil est indisponible.</string>
+</resources>

@@ -1,0 +1,6 @@
+"trip.distance" = "Distance (km)";
+"trip.error.invalid" = "Enter a valid distance.";
+"trip.error.missing" = "Enter a distance.";
+"trip.error.positive" = "Distance must be greater than zero.";
+"trip.note" = "Note";
+"trip.save" = "Save trip";

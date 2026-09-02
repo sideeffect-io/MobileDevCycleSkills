@@ -1,0 +1,6 @@
+"trip.distance" = "Distance (km)";
+"trip.error.invalid" = "Saisissez une distance valide.";
+"trip.error.missing" = "Saisissez une distance.";
+"trip.error.positive" = "La distance doit être supérieure à zéro.";
+"trip.note" = "Note";
+"trip.save" = "Enregistrer le trajet";

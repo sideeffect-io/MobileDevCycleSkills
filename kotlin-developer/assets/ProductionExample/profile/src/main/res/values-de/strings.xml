@@ -1,0 +1,12 @@
+<resources>
+    <string name="profile_preparing">Profil wird vorbereitet</string>
+    <string name="profile_prompt">Laden Sie dieses Profil, wenn Sie bereit sind.</string>
+    <string name="profile_load">Profil laden</string>
+    <string name="profile_loading">Profil wird geladen</string>
+    <string name="profile_reload">Profil neu laden</string>
+    <string name="profile_retry">Erneut versuchen</string>
+    <string name="profile_error_not_found">Profil nicht gefunden.</string>
+    <string name="profile_error_identity">Der Server hat ein anderes Profil zurückgegeben.</string>
+    <string name="profile_error_malformed">Die Profilantwort war ungültig.</string>
+    <string name="profile_error_unavailable">Der Profildienst ist nicht verfügbar.</string>
+</resources>

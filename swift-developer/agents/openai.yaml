@@ -1,0 +1,6 @@
+interface:
+  display_name: "Swift Developer"
+  short_description: "Production Swift and SwiftUI implementation"
+  default_prompt: "Use $swift-developer to implement the settled Root or Architect contract with executable evidence."
+policy:
+  allow_implicit_invocation: true

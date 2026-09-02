@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kotlin Reviewer"
+  short_description: "Evidence-based, proportionate Kotlin review"
+  default_prompt: "Use $kotlin-reviewer to independently verify Kotlin Android changes and route a lifecycle transition only when applicable."
+policy:
+  allow_implicit_invocation: true

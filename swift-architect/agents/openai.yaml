@@ -1,0 +1,6 @@
+interface:
+  display_name: "Swift Architect"
+  short_description: "Swift architecture, boundaries, and workflows"
+  default_prompt: "Use $swift-architect to resolve Swift architecture and emit a SWIFT-HANDOFF/1 transition only when a lifecycle requires one."
+policy:
+  allow_implicit_invocation: true

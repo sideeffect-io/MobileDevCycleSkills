@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kotlin Developer"
+  short_description: "Production Kotlin and Compose implementation"
+  default_prompt: "Use $kotlin-developer to implement the settled Root or Architect contract with executable Android evidence."
+policy:
+  allow_implicit_invocation: true
