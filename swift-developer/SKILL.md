@@ -11,6 +11,10 @@ description: Implement and refactor production Swift 6+/SwiftUI within settled o
 Own implementation and verification. Consume the available architecture contract and return
 executable evidence. Never self-approve, and never redesign unsettled architecture.
 
+This skill is authoritative for reusable Swift implementation and Developer-role guidance.
+Repository instructions own product facts, concrete owners, dependency pins, local validation, and
+stricter project-specific constraints; they should point here rather than restating generic doctrine.
+
 ## Operating contract
 
 1. Read applicable `AGENTS.md`, repository guidance, tests, and the current Root or Architect
@@ -66,7 +70,7 @@ Load only rows required by the task.
 | SwiftStateMachine implementation or topology refactor | [State-machine feature design](references/state-machine-features.md) |
 | SwiftUI, Observation, accessibility, localization | [SwiftUI production](references/swiftui-production.md) |
 | Unit/integration/workflow tests and safe refactoring | [Testing and refactoring](references/testing-and-refactoring.md) |
-| Inter-agent lifecycle transition | [Swift handoff contract](references/handoff-contract.md) |
+| Inter-agent lifecycle transition without a complete repository-local contract | [Swift handoff contract](references/handoff-contract.md) |
 | Reproduction, LLDB, profiling, leaks, performance | [Debugging and performance](references/debugging-and-performance.md) |
 | Compiler/language/tools/Xcode/deployment compatibility | [Toolchain currency](references/toolchain-currency.md) |
 | iOS/macOS/App Intents/extensions/runtime/security | [Apple platform validation](references/apple-platform-validation.md) |
@@ -216,10 +220,15 @@ blocker and route it through the repository lifecycle instead of inventing a `ne
 
 ## Handoff contract
 
-Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
-[Swift handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `SWIFT-HANDOFF/1` block. Put the three implementation
-complexity entries in `CURRENT-STATE` unless a stricter repository contract places them elsewhere.
+Use a handoff only when an inter-agent lifecycle requires one. If applicable repository guidance
+defines a complete local handoff schema, transition table, validation contract, and correction
+routing, use that contract as the sole handoff-format authority and do not load the generic reference
+merely to merge duplicate instructions. Repository-local handoff rules may add project fields,
+limits, or routes, but they do not redefine this skill's reusable Developer doctrine.
+
+Otherwise read and follow the [Swift handoff contract](references/handoff-contract.md) before
+emitting exactly one `SWIFT-HANDOFF/1` block. Put the three implementation complexity entries where
+the complete local contract requires them, or in `CURRENT-STATE` when using the generic contract.
 
 - Completed implementation routes `READY` to `SWIFT_REVIEWER`.
 - An architecture contradiction routes `CHANGES_REQUIRED` to `SWIFT_ARCHITECT`.
