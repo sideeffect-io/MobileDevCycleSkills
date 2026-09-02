@@ -93,8 +93,9 @@ Carry correlation only for real overlap, replacement, stale completion, repeated
 cross-owner acknowledgement. Do not add per-phase IDs to a proved serialized/single-flight workflow
 for uniformity.
 
-## Choose the correct output cardinality
+## Choose output cardinality and internal execution topology
 
+Output cardinality and the number or scheduling of injected functions are separate design choices.
 Resolve the consumer's exact KotlinStateMachine revision before implementation. At the currently
 inspected API:
 
@@ -106,10 +107,51 @@ A no-event output remains runtime-owned. Never create an unowned scope or detach
 simulate fire-and-forget. Use no event only when the effect is fully contained and its result cannot
 affect legal state, UI, Navigation, acknowledgement, privacy, data integrity, retry, or recovery.
 
-One output may call several injected suspending capabilities in order and keep intermediate results
-local. Emit only the semantic outcome that changes the machine's next decision. Failures that can
-expose account data, lose accepted data, or gate continuation must be resolved authoritatively or
-returned as a semantic event.
+One output may call one or several injected suspending capabilities when they implement one cohesive
+business effect. Execute them:
+
+- sequentially when ordering, data dependencies, transactions, or invariants require it;
+- concurrently when the operations are semantically independent and parallel execution serves the
+  accepted behavior;
+- as a small mixture of sequential stages and concurrent groups when the dependency graph requires
+  both.
+
+Use structured concurrency owned by the output Job. Prefer `coroutineScope` with child `async`
+operations and explicit `await` or `awaitAll`. Every child must finish or be cancelled before the
+output returns. Do not use `GlobalScope`, construct an unowned `CoroutineScope`, or launch work that
+outlives the output. Use `supervisorScope` only when sibling failures are intentionally independent
+and the aggregate result handles each failure according to the business contract.
+
+Parallelize only independent work. Keep execution sequential when one result feeds another, order is
+observable, operations share mutable or transactional state, or concurrency could violate privacy,
+data-integrity, rate-limit, resource, or platform constraints. Define aggregate failure semantics:
+fail fast when one failure invalidates the whole business effect, or collect independent results when
+the machine needs a combined outcome. Preserve cancellation propagation.
+
+For example, independent cleanup functions may run concurrently and yield one aggregate event:
+
+```kotlin
+Output {
+    val results = coroutineScope {
+        listOf(
+            async { clearWidgetData() },
+            async { clearTransientExports() },
+            async { clearRouteHandoffs() },
+        ).awaitAll()
+    }
+
+    CleanupDidFinish(summary = summarize(results))
+}
+```
+
+The same internal execution may return `null` when all results are authoritatively handled and no
+machine decision depends on them, or use `OutputFlow` when multiple events over time are meaningful.
+Do not emit one event per capability merely because several functions run or because they run in
+parallel. Keep intermediate values local and emit the smallest semantic cardinality the state
+machine requires.
+
+Failures that can expose account data, lose accepted data, or gate continuation must be resolved
+authoritatively inside the output or returned as a semantic event.
 
 ## Keep sentence-readable routes
 
@@ -141,6 +183,8 @@ Before handoff:
   invalid combination, or conditional dispatch is introduced;
 - preserve separate states when their explicit alternatives improve business meaning and DSL
   readability;
+- keep cohesive multi-operation work inside one output when intermediate stages do not alter machine
+  policy, whether those operations run sequentially or concurrently;
 - move non-interleavable phases into local structured control flow;
 - collapse mechanistic result events;
 - remove duplicate retry, correlation, rollback, or cleanup policy already owned elsewhere;
@@ -162,6 +206,11 @@ When assessing a merge, characterize both candidates across their accepted event
 selection, next-state behavior, invariants, and recovery—not only UI projection. Add a negative test
 when a merged payload could encode an invalid combination or conditional dispatch would recreate the
 former alternatives.
+
+For an output that invokes several functions, prove the business dependency graph rather than exact
+scheduler timing: verify required ordering, verify safe overlap when concurrency matters, verify
+aggregate success/failure mapping, and verify cancellation of all structured child jobs. Do not
+require one result event per internal function when the machine observes one aggregate outcome.
 
 Do not demand exhaustive tests for deliberately unmodeled paths or one test per private phase.
 Controller/ViewModel projections complement but do not replace raw machine tests when route legality
