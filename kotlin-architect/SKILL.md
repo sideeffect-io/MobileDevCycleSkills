@@ -25,11 +25,44 @@ toolchain, dependency, and executable evidence; otherwise inspect the live syste
 4. Preserve product behavior unless the requested outcome explicitly changes it.
 5. Resolve ownership, dependency direction, public seams, source-of-truth policy, workflow
    behavior, delivery order, risks, and validation before proposing code changes.
-6. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to
+6. Choose the least conceptually complex design that satisfies accepted behavior, named invariants,
+   repository boundaries, and current approved extensibility.
+7. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to
    the user with concrete options.
 
 Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless
 evidence supports another valid choice; `consider` is a prompt and `only when` is a hard boundary.
+
+## Lean correctness contract
+
+Correctness includes proportionality. Start from the direct design with the fewest modules, owners,
+public seams, states, events, outputs, persistence artifacts, and recovery layers that satisfies the
+accepted happy path and named invariants. Add complexity only when the direct baseline demonstrably
+fails an admitted requirement.
+
+Do not bind or retain a Gradle module, interface, wrapper, factory, DI seam, public API, state,
+event, retry path, correlation identifier, durable checkpoint, recovery layer, validator rule, or
+implementation-shaped test merely for symmetry, generic best practice, future-proofing,
+mockability, or a hypothetical failure.
+
+A non-trivial mechanism requires at least one concrete admission source:
+
+- an acceptance criterion;
+- an existing named invariant or accepted architecture decision;
+- a reproduced defect or observed production failure;
+- a concrete Android, framework, API, or toolchain requirement;
+- a credible named security, privacy, or data-loss scenario;
+- two current consumers that genuinely require variation.
+
+For each admitted mechanism, identify the protected scenario, authoritative owner, why the direct
+baseline is insufficient, the simpler alternative considered, and the concrete reasoning/change
+cost. An existing repository pattern is an available tool, not proof that the current task requires
+it. Keep each safety or recovery policy at its authoritative owner; duplicate it only through an
+explicit defense-in-depth decision naming the distinct threat protected by both controls.
+
+Tests and architecture validators protect observable behavior, named invariants, public contracts,
+and forbidden edges. They must not freeze private topology or force extra production concepts
+solely to make an implementation decomposition exhaustively testable.
 
 ## Resource routing
 
@@ -62,19 +95,24 @@ replace mandatory local constraints or authorize production edits.
 
 ## Architecture workflow
 
-### 1. Establish constraints and scope
+### 1. Establish product scope and the complexity envelope
 
-Record Kotlin, AGP, Gradle, JDK/JVM, Compose, AndroidX, SDK and variant compatibility, dependency
-pins, process surfaces, owners, supported form factors/locales, and required validation. Read
-relevant tests before architecture decisions.
+Record accepted behavior, deliberately unmodeled adverse paths, Kotlin/AGP/Gradle/JDK/JVM/Compose/
+AndroidX/SDK/variant compatibility, dependency pins, process surfaces, owners, form factors,
+locales, and required validation. Read relevant tests before architecture decisions.
+
+Describe the lean baseline before adding resilience or abstraction. Do not convert every
+conceivable network, cancellation, stale-result, process-recreation, rollback, or retry path into a
+design requirement.
 
 ### 2. Trace the live system
 
 Follow real app and Android component entry points through composition, Navigation, Features,
 Compose or View presentation, state holders, state machines, optional domain use cases,
 Datasources/repositories, generic Frameworks, platform/vendor boundaries, persistence, and result
-delivery. Include ownership, lifetime, cancellation, retry, buffering, correlation, stale-result
-rejection, configuration change, process recreation, recovery, and repeat delivery where relevant.
+delivery. Include lifetime, cancellation, retry, buffering, correlation, stale-result rejection,
+configuration change, process recreation, recovery, and repeat delivery only where accepted
+behavior, a platform contract, or named invariants make them material.
 
 ### 3. Define graph and ownership
 
@@ -94,39 +132,41 @@ Use packages inside one module when sufficient. Add modules only for a meaningfu
 visibility, reuse, delivery, or build boundary. Let consumers own narrow abstractions; do not widen
 visibility, add umbrella dependencies, or expose implementations merely to make a design compile.
 
-Treat Feature package shape as an ownership contract, not cosmetic organization. Inventory every
-product feature and subfeature before handoff and enforce the vertical `statemachine` / `views`
-layout in [Architecture layers](references/architecture-layers.md): canonical four-file machine
-owners, one discoverable `RootScreen` source per Compose owner, stateless-owner exclusions,
-owner-root public contracts, mirrored tests, and no machine-to-view dependency. Require an
-executable package/path guardrail whenever the repository has architecture validation.
+Treat Feature package shape as an organization rule only after a state machine or presentation
+owner has been admitted. Inventory product owners before handoff, keep vertical `statemachine` and
+`views` ownership where appropriate, mirror tests, and forbid machine-to-view dependencies. Do not
+create an empty state machine or an empty Outputs file merely to satisfy symmetry; update a
+repository guardrail when a behavior-preserving simplification changes private topology.
 
 ### 4. Define behavior and effect seams
 
-Start from immutable values, sealed states and failures, pure policy, semantic outcomes, and named
+Start from immutable values, sealed domain failures, pure policy, semantic outcomes, and named
 effects. State flows down and intent flows up. Features own their effect ports; composition injects
-repositories or providers. Outputs define sequencing, cancellation, and result-to-event mapping.
-UI and machines never construct SDK clients, DAOs, repositories, Hilt components, dispatchers,
-service locators, or navigation controllers.
+repositories or providers. Outputs define sequencing, cancellation, output cardinality, and
+semantic result mapping. UI and machines never construct SDK clients, DAOs, repositories, Hilt
+components, dispatchers, service locators, or navigation controllers.
 
-### 5. Choose mechanism intentionally
+### 5. Choose mechanisms intentionally
 
-Use pure functions or local presentation state for trivial behavior. Use Kotlin State Machine when
-a workflow needs persistent legality, meaningful async effects, retry/recovery, cancellation,
-Navigation lifetime, or cross-feature coordination. Resolve and inspect the exact dependency
-revision before designing DSL code; compile proposed API usage against it.
+Prefer, in order, pure functions, local presentation state, one structured suspending function, or
+a small coordinator when they completely express the contract. Use Kotlin State Machine when
+persistent state-dependent legality, replaceable or long-lived outputs, retry/recovery, Navigation
+lifetime, correlation, or cross-owner coordination actually requires it.
 
-For each in-scope machine define owner, initial state, lifetime and coroutine scope, states, events,
-outputs and capabilities, transitions, result events, cancellation/correlation/recovery, and
-communication with other machines.
+For each admitted machine define owner, initial state, lifetime/scope, activation, semantic states
+and events, outputs/capabilities, transitions, output cardinality, cancellation, correlation,
+recovery, outcomes, and communication. States represent behavioral modes rather than every
+suspending call. Read [State-machine feature design](references/state-machine-features.md) and
+compile proposed API usage against the resolved dependency revision.
 
 ### 6. Make the contract executable
 
 Define owner-local tests and structural guardrails with the design. Cover direct dependency/use
-parity, forbidden edges, minimal visibility, exact source-set/test ownership, changed-module
-builds, coroutine/lifecycle behavior, affected locales/accessibility, app/background/dynamic-
-feature destinations, migration/recovery, release/R8, and security/privacy risk. Assembly is not
-runtime or device proof.
+parity, forbidden edges, minimal visibility, source-set/test ownership, changed-module builds,
+coroutine/lifecycle behavior, affected locales/accessibility, app/background destinations,
+migration/recovery that is actually required, release/R8, and security/privacy risk. Assembly is
+not runtime or device proof. Guardrails should reject forbidden architecture rather than require an
+exact private type inventory.
 
 ### 7. Handoff without ambiguity
 
@@ -135,22 +175,28 @@ Architectural handoff must include:
 - allowed and forbidden direction;
 - owners, lifetimes, and source-of-truth edges;
 - public seam or dependency changes and rationale;
-- machine topology changes (states/events/outputs/capabilities);
-- required sequencing and assumptions;
-- validation expectations, unresolved decisions, and open risks.
+- required workflow behavior and output cardinality;
+- validation expectations, assumptions, unresolved decisions, and open risks;
+- `LEAN-BASELINE`: the smallest viable design considered;
+- `ADMITTED-COMPLEXITY`: each material mechanism and its admission evidence;
+- `REQUIRED-ADVERSE-PATHS`: adverse paths implementation must handle;
+- `DELIBERATELY-UNMODELED`: plausible paths intentionally outside the contract.
 
-Do not hand off unresolved ownership ambiguity, a reverse edge, or a hidden behavior change.
+Bind behavior, invariants, ownership, and direction by default. Bind a concrete mechanism or exact
+private topology only when that mechanism itself is necessary. Do not hand off unresolved ownership
+ambiguity, a reverse edge, or a hidden behavior change.
 
 Run `scripts/validate_examples.sh` after changing the compiled example or a Kotlin State Machine
-snippet. Set `RUN_ANDROID_TESTS=1` with a connected emulator or device to execute the Compose
-semantics and callback tests; otherwise the validator compiles those tests without claiming a
-device result.
+snippet. Set `RUN_ANDROID_TESTS=1` with a connected emulator or device to execute Compose semantics
+and callback tests; otherwise the validator compiles those tests without claiming a device result.
 
 ## Handoff contract
 
 Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
 [Kotlin handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `KOTLIN-HANDOFF/1` block.
+contract, before emitting exactly one `KOTLIN-HANDOFF/1` block. Put the four lean-design entries in
+`CURRENT-STATE` for every non-trivial architecture handoff, unless a stricter repository contract
+places them elsewhere.
 
 - Completed design routes `READY` to `KOTLIN_DEVELOPER`.
 - Missing product intent, authority, approval, or external state routes `BLOCKED` to `ROOT`.

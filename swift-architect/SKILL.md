@@ -8,27 +8,60 @@ description: Design and assess architecture for Swift 6+ iOS and macOS apps. Use
 <!-- swift-suite:ROLE-ARCHITECT -->
 <!-- swift-suite:ARCH-SPECIALIST-OVERLAY -->
 
-Own only the design stage. Inspect the live system, resolve architecture contracts, and pass unambiguous
-implementation constraints to the next role.
+Own only the design stage. Inspect the live system, resolve architecture contracts, and pass
+unambiguous implementation constraints to the next role.
 
-For a repository-independent or hypothetical design, state assumptions and defer repository/toolchain
-evidence; otherwise inspect the live system.
+For a repository-independent or hypothetical design, state assumptions and defer repository or
+toolchain evidence; otherwise inspect the live system.
 
 ## Operating contract
 
 1. Read applicable `AGENTS.md` files and repository guidance.
-2. Inspect branch, worktree, relevant diff, manifests, imports, public symbols, composition roots, tests,
-   dependency pins, and guardrails. Preserve unrelated edits.
-3. Treat manifests, source, compiled APIs, and tests as source of truth. Documentation explains intent, not
-   authority.
+2. Inspect branch, worktree, relevant diff, manifests, imports, public symbols, composition roots,
+   tests, dependency pins, and guardrails. Preserve unrelated edits.
+3. Treat manifests, source, compiled APIs, and tests as source of truth. Documentation explains
+   intent, not authority.
 4. Preserve product behavior unless the requested outcome explicitly changes it.
-5. Resolve ownership, dependency direction, public seams, workflow behavior, delivery order, risks, and
-   validation plan before proposing code changes.
-6. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to the user
-   with concrete options.
+5. Resolve ownership, dependency direction, public seams, workflow behavior, delivery order, risks,
+   and validation before proposing code changes.
+6. Choose the least conceptually complex design that satisfies accepted behavior, named invariants,
+   repository boundaries, and current approved extensibility.
+7. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to
+   the user with concrete options.
 
-Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless evidence
-supports another valid choice; `consider` is a prompt and `only when` is a hard boundary.
+Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless
+evidence supports another valid choice; `consider` is a prompt and `only when` is a hard boundary.
+
+## Lean correctness contract
+
+Correctness includes proportionality. Start from the direct design with the fewest owners, public
+seams, states, events, effects, persistence artifacts, and recovery layers that satisfies the
+accepted happy path and named invariants. Add complexity only when the direct baseline demonstrably
+fails an admitted requirement.
+
+Do not bind or retain a target, protocol, wrapper, factory/environment key, public seam, state,
+event, retry path, correlation identifier, durable checkpoint, recovery layer, validator rule, or
+implementation-shaped test merely for symmetry, generic best practice, future-proofing,
+mockability, or a hypothetical failure.
+
+A non-trivial mechanism requires at least one concrete admission source:
+
+- an acceptance criterion;
+- an existing named invariant or accepted architecture decision;
+- a reproduced defect or observed production failure;
+- a concrete platform, framework, API, or toolchain requirement;
+- a credible named security, privacy, or data-loss scenario;
+- two current consumers that genuinely require variation.
+
+For each admitted mechanism, identify the protected scenario, authoritative owner, why the direct
+baseline is insufficient, the simpler alternative considered, and the concrete reasoning/change
+cost. An existing repository pattern is an available tool, not proof that the current task requires
+it. Keep each safety or recovery policy at its authoritative owner; duplicate it only through an
+explicit defense-in-depth decision naming the distinct threat protected by both controls.
+
+Tests and guardrails protect observable behavior, named invariants, public contracts, and forbidden
+architecture. They must not freeze private topology or force extra production concepts solely to
+make an implementation decomposition exhaustively testable.
 
 ## Resource routing
 
@@ -51,8 +84,6 @@ When a listed specialization is installed and its risk dominates, load that spec
 current Architect agent. Do not spawn or switch to a specialist agent or select a custom agent
 profile.
 
-Specialist skill overlays (load only if installed locally):
-
 | Triggered risk | Specialist | Installed skill id | Use case |
 | --- | --- | --- | --- |
 | Concurrency/isolation risk | swift-concurrency expert | `swift-concurrency` | actor boundaries, cancellation, shared-state risk |
@@ -70,61 +101,85 @@ mandatory local constraints or authorize production edits.
 
 ## Architecture workflow
 
-### 1. Establish constraints and scope
+### 1. Establish product scope and the complexity envelope
 
-Record language/toolchain compatibility, dependency pins, target/process surfaces, owners, and required
-validation. Read relevant tests before any architecture decisions.
+Record accepted behavior, deliberately unmodeled adverse paths, language/toolchain compatibility,
+dependency pins, target/process surfaces, owners, and required validation. Read relevant tests
+before architecture decisions. Do not convert every conceivable network, cancellation, stale-result,
+process-death, rollback, or retry path into a design requirement.
+
+Describe the lean baseline before adding resilience or abstraction. Treat this baseline as the
+comparison point for every subsequent mechanism.
 
 ### 2. Trace the live system
 
-Follow real composition, navigation, feature roots, state machines, capabilities, persistence/network
-boundaries, and result delivery. For async flows, include ownership, lifetime, cancellation, retry, stale
-result handling, recovery, and repeat delivery behavior.
+Follow real composition, navigation, feature roots, state machines, capabilities,
+persistence/network boundaries, and result delivery. For asynchronous flows, include ownership,
+lifetime, cancellation, retry, stale-result handling, recovery, and repeat delivery only where the
+accepted behavior, platform contract, or named invariants make them material.
 
 ### 3. Define graph and ownership
 
-Model only SwiftPM-target edges. Give each responsibility one owner and one allowed direction.
-Keep Domain independent; place adapters in Frameworks, mapping in Datasources, behavior in Features,
-destinations in Navigation, and assembly in the process composition root.
+Model only SwiftPM-target edges. Give each responsibility one owner and one allowed direction. Keep
+Domain independent; place adapters in Frameworks, mapping in Datasources, behavior in Features,
+destinations in Navigation, and assembly in the process composition root. Add a target or protocol
+only for a real ownership, visibility, reuse, process, delivery, or variation boundary.
 
 ### 4. Define behavior and effect seams
 
-Start from `Equatable & Sendable` value models, pure policy, and explicit failure modes. Effects live in
-feature-owned ports and are injected by composition. Outputs must define result sequencing and failure
-mapping.
+Start from `Equatable & Sendable` value models, pure policy, and explicit finite failure modes.
+Effects live in feature-owned ports and are injected by composition. Outputs define required
+sequencing, cancellation, output cardinality, and semantic failure mapping without exposing internal
+execution phases as public behavior.
 
-### 5. Choose mechanism intentionally
+### 5. Choose mechanisms intentionally
 
-Use pure functions for pure behavior. Use SwiftStateMachine when the workflow needs persistent legality,
-cross-feature lifecycle, async effects, recovery, or cancellation.
+Prefer, in order, pure functions, local presentation state, a structured async function, or a small
+actor/coordinator when they completely express the contract. Use SwiftStateMachine when persistent
+state-dependent legality, replaceable or long-lived effects, recovery, navigation lifetime,
+correlation, or cross-owner coordination actually requires it.
 
-### 6. Make contract executable
+For state machines, design states around behavioral modes rather than individual async calls. Emit
+no event, one semantic event, or an event sequence according to the resolved SwiftStateMachine API
+and actual decision needs. Read [State-machine feature design](references/state-machine-features.md)
+before binding topology.
+
+### 6. Make the contract executable
 
 Define:
-- required tests (owner-local and integration),
-- guardrails (forbidden imports/dependencies, minimal visibility),
-- migration/recovery boundaries,
-- accessibility/localization impact,
-- security/privacy risks,
-- and how each constraint can be observed.
+
+- owner-local and integration tests for accepted behavior and named invariants;
+- negative guardrails for forbidden imports, dependencies, exposure, and unsafe ownership;
+- migration/recovery boundaries that are actually required;
+- accessibility/localization impact;
+- security/privacy risks and authoritative controls;
+- and how each admitted mechanism can be observed without freezing private topology.
 
 ### 7. Handoff without ambiguity
 
 Architectural handoff must include:
-- allowed and forbidden direction,
-- owners and ownership edges,
-- public seam changes and rationale,
-- machine topology changes (states/events/capabilities),
-- required sequencing and assumptions,
-- unresolved decisions and open risks.
 
-Do not hand off unresolved ownership ambiguities or hidden behavior changes.
+- allowed and forbidden direction;
+- owners and ownership edges;
+- public seam changes and rationale;
+- required workflow behavior and output cardinality;
+- required sequencing, assumptions, validation, and open risks;
+- `LEAN-BASELINE`: the smallest viable design considered;
+- `ADMITTED-COMPLEXITY`: each material mechanism and its admission evidence;
+- `REQUIRED-ADVERSE-PATHS`: adverse paths implementation must handle;
+- `DELIBERATELY-UNMODELED`: plausible paths intentionally outside the contract.
+
+Bind behavior, invariants, ownership, and direction by default. Bind a concrete mechanism or exact
+private topology only when that mechanism itself is necessary. Do not hand off unresolved ownership
+ambiguities or hidden behavior changes.
 
 ## Handoff contract
 
 Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
 [Swift handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `SWIFT-HANDOFF/1` block.
+contract, before emitting exactly one `SWIFT-HANDOFF/1` block. Put the four lean-design entries in
+`CURRENT-STATE` for every non-trivial architecture handoff, unless a stricter repository contract
+places them elsewhere.
 
 - Completed design routes `READY` to `SWIFT_DEVELOPER`.
 - Missing product intent, authority, approval, or external state routes `BLOCKED` to `ROOT`.

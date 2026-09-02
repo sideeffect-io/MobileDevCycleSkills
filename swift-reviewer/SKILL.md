@@ -1,6 +1,6 @@
 ---
 name: swift-reviewer
-description: Independently review Swift 6+ iOS and macOS changes against requested behavior, architecture, repository policy, and executable evidence. Use for code review, pre-merge gates, architecture and concurrency conformance, SwiftUI/accessibility/localization quality, App Intents and system-surface behavior, tests, performance, and risk.
+description: Independently review Swift 6+ iOS and macOS changes against requested behavior, architecture, repository policy, and executable evidence. Use for code review, pre-merge gates, architecture and concurrency conformance, SwiftUI/accessibility/localization quality, App Intents and system-surface behavior, tests, performance, proportionality, and risk.
 ---
 
 # Swift Reviewer
@@ -16,17 +16,42 @@ self-review and do not claim independent provenance.
 
 1. Read applicable `AGENTS.md`, repository guidance, request, and the one current lifecycle handoff
    when one exists.
-2. Inspect branch, dirty worktree, complete scoped diff, owners, manifests, imports, tests, consumers,
-   and guardrails. Separate unrelated edits and failures.
+2. Inspect branch, dirty worktree, complete scoped diff, owners, manifests, imports, tests,
+   consumers, and guardrails. Separate unrelated edits and failures.
 3. Reconstruct critical execution paths; do not review only changed lines in isolation.
-4. Run proportionate read-only checks that materially reduce uncertainty.
-5. Lead with findings ordered by severity; include evidence, impact, violated contract, remediation, and
-   required proof.
-6. Re-review every remediation. Never infer resolution from code movement alone.
-7. Escalate product, scope, authority, and external-state decisions to the user with options and impact.
+4. Review sufficiency and necessity as separate questions.
+5. Run proportionate read-only checks that materially reduce uncertainty.
+6. Lead with findings ordered by severity; include evidence, impact, violated contract,
+   remediation, and required proof.
+7. Re-review every remediation. Never infer resolution from code movement alone.
+8. Escalate product, scope, authority, and external-state decisions to the user with options and
+   impact.
 
-Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless evidence
-supports another valid choice; `consider` is optional.
+Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless
+evidence supports another valid choice; `consider` is optional.
+
+## Lean review contract
+
+Correct code can still be unready when its mechanism is disproportionate. First establish whether
+the change satisfies accepted behavior and named safety, privacy, data-integrity, accessibility,
+platform, lifecycle, and architecture invariants. Then independently establish whether each
+material mechanism is necessary.
+
+For every material target, protocol, wrapper, factory/environment key, public seam, machine,
+state/event family, retry/recovery layer, correlation scheme, durable checkpoint, validator rule, or
+implementation-shaped test, identify:
+
+- the acceptance criterion, named invariant, reproduced defect, concrete platform/API requirement,
+  credible named security/privacy/data-loss scenario, or current variation need it protects;
+- the authoritative owner;
+- the simpler alternative considered;
+- why that alternative is insufficient;
+- the local reasoning, change, runtime, and test cost.
+
+Existing patterns, high reasoning effort, green tests, or additional defensive coverage do not by
+themselves justify a mechanism. A material mechanism without admission evidence is at least a
+`medium` finding and blocks readiness. Do not recommend removing a named invariant merely to reduce
+code; require the smallest mechanism that preserves it.
 
 ## Resource routing
 
@@ -63,29 +88,52 @@ The Reviewer owns findings and verdict. Specialist skills provide depth and tool
 
 ### 1. Confirm scope and intent
 
-Validate the requested outcome, owners, preserved behavior, destinations, risk, and validation claims.
-Read source tests when behavior/API changed.
+Validate the requested outcome, accepted and deliberately unmodeled paths, owners, preserved
+behavior, destinations, risk, and validation claims. Read source tests when behavior or API changed.
 
 ### 2. Check hard gates first
 
-Check compile/test state, forbidden edges, data-loss, race risk, cancellation/lifetime issues,
-API availability, unlocalized user-facing changes, accessibility regressions, and migration/recovery gaps.
-A hard-gate failure blocks readiness.
+Check compile/test state, forbidden edges, data loss, race risk, cancellation/lifetime issues, API
+availability, unlocalized user-facing changes, accessibility regressions, and required migration or
+recovery. A hard-gate failure blocks readiness.
 
 ### 3. Trace architecture and behavior
 
-Compare live target/import graph, ownership, access control, feature/navigator separation, seams,
-composition, machine topology, and test ownership against contract. Validate user intent flow through UI,
-events, effects, adapters, outputs, and navigation under failure conditions.
+Compare the live target/import graph, ownership, access control, feature/navigator separation,
+seams, composition, machine topology, and test ownership against the contract. Validate user intent
+through UI, events, effects, adapters, outputs, and navigation under required success and failure
+conditions.
 
-### 4. Validate high-risk claims
+### 4. Perform the necessity pass
 
-Run proportionate checks first for changed targets/tests, then owner-level architecture gates, integration,
-and runtime-sensitive flows. Record exact commands, directories, outputs, and blockers.
+Ask what the smallest implementation would be that still passes behavioral and invariant evidence.
+Check whether:
 
-### 5. Report and converge
+- states differ in legal inputs, observable projection, cancellation/lifetime, recovery, or external
+  outcome rather than only in the next internal command;
+- events represent semantic decisions rather than internal function returns;
+- retry variants need distinct legal topology or can use one closed retry plan;
+- correlation is required by real overlap, replacement, stale completion, repeated delivery, or
+  cross-owner acknowledgement;
+- persistence protects an accepted process-death or migration obligation;
+- validation, retry, rollback, or cleanup policy is duplicated across owners;
+- tests or guardrails freeze a private decomposition rather than behavior or a forbidden boundary;
+- a one-implementation protocol or wrapper has a current consumer-owned reason to exist.
 
-Report findings, residual risk, blocked checks, and required follow-up. Never score if not asked.
+Classify concrete findings as `state-explosion`, `mechanistic-event-model`, `duplicated-policy`,
+`speculative-recovery`, `unearned-abstraction`, `implementation-fossilizing-guardrail`, or
+`topology-coupled-test` where those labels improve remediation clarity.
+
+### 5. Validate high-risk claims
+
+Run proportionate checks first for changed targets/tests, then owner-level architecture gates,
+integration, and runtime-sensitive flows. Record exact commands, directories, outputs, and blockers.
+
+### 6. Report and converge
+
+Report findings, residual risk, blocked checks, required follow-up, and the necessity assessment.
+Never score if not asked. When numeric scoring is requested, apply `PROPORTIONALITY` from the quality
+model; the score is diagnostic unless the user or repository explicitly makes a threshold binding.
 
 ## Finding contract
 
@@ -94,17 +142,19 @@ Report findings, residual risk, blocked checks, and required follow-up. Never sc
 - `medium`: concrete maintainability, unjustified mechanism cost, or non-trivial quality gap.
 - `low`: bounded cleanup issue.
 
-Each finding includes severity, exact location/evidence, violated contract, impact, required proof, and
-minimal remediation.
+Each finding includes severity, exact location/evidence, violated contract, impact, required proof,
+and minimal remediation. Material unearned complexity is never reduced to a subjective style note.
 
 ## Review handoff
 
 Before closing, provide:
-- validation performed,
-- confirmed findings (ordered),
-- blocked/not-run checks,
-- residual risk,
-- and minimal remediation batch.
+
+- validation performed;
+- confirmed findings ordered by severity;
+- blocked/not-run checks;
+- residual risk;
+- minimal remediation batch;
+- necessity result, including unjustified mechanisms or `NONE`.
 
 If required evidence is missing, do not mark ready. Route producible implementation evidence to
 `SWIFT_DEVELOPER` as `CHANGES_REQUIRED`; route missing user authority or external state to `ROOT` as
@@ -116,7 +166,8 @@ Use a handoff only when an inter-agent lifecycle requires one. Read and follow t
 [Swift handoff contract](references/handoff-contract.md), plus any stricter repository-local
 contract, before emitting exactly one `SWIFT-HANDOFF/1` block.
 
-- A ready implementation routes `APPROVED` to `COMPLETE`.
+- A ready implementation routes `APPROVED` to `COMPLETE` only when applicable hard gates pass and no
+  `blocker`, `high`, or `medium` finding remains.
 - Implementation or test findings route `CHANGES_REQUIRED` to `SWIFT_DEVELOPER`.
 - Architecture findings route `CHANGES_REQUIRED` to `SWIFT_ARCHITECT`.
 - Missing user authority or external state routes `BLOCKED` to `ROOT`.
