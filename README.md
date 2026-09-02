@@ -46,6 +46,18 @@ and correction routes. In that case the project contract is the sole handoff-for
 that lifecycle and the generic reference must not be loaded merely to merge duplicate instructions.
 The role skill still remains authoritative for reusable Architect, Developer, or Reviewer behavior.
 
+## Independently loadable reference copies
+
+Some focused references intentionally exist under more than one role directory. In particular, the
+Swift Architect and Swift Developer currently carry the same state-machine reference so either skill
+can be installed and loaded independently without a cross-skill dependency or an always-on overlay.
+Only the active role loads its local copy, so this maintenance duplication does not add two copies to
+one role context.
+
+Keep copies semantically synchronized—and byte-identical when they express the same contract. Split
+them only when the roles genuinely need different reference content. Do not replace role-local copies
+with a shared overlay whose unconditional loading would increase context for unrelated work.
+
 ## Maintenance rules
 
 - Put a reusable rule in the applicable skill or focused reference, not in a project sidecar or TOML
@@ -58,5 +70,5 @@ The role skill still remains authoritative for reusable Architect, Developer, or
   solely to deduplicate independently loaded Swift/Kotlin or Architect/Developer/Reviewer roles.
 - Preserve generic fallback handoff references for repositories that do not define a complete local
   lifecycle contract.
-- After changing a skill, validate its internal links, examples/scripts when affected, and the project
-  sidecars that intentionally declare stricter local deltas.
+- After changing a skill, validate its internal links, examples/scripts when affected, synchronized
+  role-local reference copies, and project sidecars that intentionally declare stricter local deltas.
