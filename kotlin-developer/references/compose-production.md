@@ -45,16 +45,22 @@ coordination outside child Screens.
 
 ## Accessibility, localization, and adaptive UI
 
-Prefer semantic Material controls over click gestures. Preserve content descriptions where needed,
-role/state/value semantics, heading/live-region behavior, focus order, keyboard/D-pad input, touch
-targets, contrast, font scaling, reduced motion, and TalkBack/Switch Access flows.
+Prefer semantic Material controls over click gestures. Preserve meaningful content descriptions,
+roles, state/value descriptions, headings, live-region or other screen-reader announcements, focus
+and traversal order, focus restoration, keyboard/D-pad input, and TalkBack/Switch Access flows.
+Merge descendants or clear and replace semantics only when the resulting accessible element is
+intentional and complete. Hide purely decorative graphics from accessibility.
 
-Every user-facing string, plural, accessibility label, notification, widget, shortcut, tile, and
-metadata value follows repository resources and all supported locales. Do not display exception
-messages. Use locale-aware formatters and test RTL when a supported locale requires it.
+Meet touch-target, contrast, font-scaling, reduced-motion/animation-scale, and non-color-only
+communication requirements. Charts and other visualizations expose an equivalent textual summary
+and selected values. Every user-facing string, plural, accessibility label, notification, widget,
+shortcut, tile, and metadata value follows repository resources and all supported locales. Do not
+display exception messages. Use locale- and time-zone-aware formatters and test RTL when a supported
+locale requires it.
 
-Build adaptive layouts for window size classes, orientation, foldables, tablets, ChromeOS, and
-multi-window as the product supports. Do not encode phone-only width assumptions.
+Build adaptive layouts for window size classes, orientation, edge-to-edge insets, IME behavior,
+foldables, tablets, ChromeOS, and multi-window as the product supports. Do not encode phone-only
+width assumptions or device-name branches.
 
 ## Previews, tests, and performance
 
