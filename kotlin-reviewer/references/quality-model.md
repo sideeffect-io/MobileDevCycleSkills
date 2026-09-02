@@ -19,7 +19,7 @@ reviews, apply the same dimensions and gate questions qualitatively.
 | `TEST_QUALITY` | 9 | deterministic behavior/invariant coverage at the owner |
 | `PERFORMANCE_RESOURCES` | 5 | measured performance and correct memory/I/O/battery lifetime |
 | `READABILITY` | 8 | cohesive, intention-revealing, locally understandable code |
-| `PROPORTIONALITY` | 10 | every material mechanism has evidence and no simpler sufficient design remains |
+| `PROPORTIONALITY` | 10 | no unearned mechanisms, over-splitting, hidden topology, or topology relocation |
 | `INTEGRATION_RECOVERY` | 3 | live DI/wiring, entry paths, persistence, restoration, and recovery |
 | `ENFORCEMENT_EVIDENCE` | 3 | executable negative guardrails and recorded validation |
 
@@ -31,13 +31,14 @@ and renormalize applicable weights. Do not hide a weak dimension as non-applicab
 - `0-2`: absent, contradicted, or critically broken.
 - `3-4`: major gaps; design or behavior is unreliable.
 - `5-6`: partial implementation with important unverified or disproportionate areas.
-- `7-8`: solid but has material gaps, weak enforcement, or avoidable complexity.
+- `7-8`: solid but has material gaps, weak enforcement, avoidable complexity, or hidden topology.
 - `8.5`: strong source-level implementation; only bounded improvement remains.
-- `9-9.5`: excellent and executable, with comprehensive relevant evidence and lean mechanisms.
+- `9-9.5`: excellent and executable, with comprehensive relevant evidence and explicit lean mechanisms.
 - `10`: exceptional for the scoped risk; never a default pass.
 
 Score observed behavior and evidence, not effort or quantity. More modules, interfaces, machines,
-states, tests, guardrails, or reports do not improve a score by themselves.
+states, tests, guardrails, or reports do not improve a score by themselves. Fewer concrete states do
+not improve a score when the same topology is moved into payloads and branches.
 
 ## Evidence levels
 
@@ -72,10 +73,28 @@ For every material module, machine, state/event family, interface, wrapper, fact
 checkpoint, retry/recovery layer, correlation scheme, public seam, or implementation-shaped
 validator, identify its protected scenario, owner, simpler alternative, and concrete cost.
 
-A material mechanism without admission evidence is at least a `medium` finding. Repeated retry
-states with identical legal inputs/UI, events that merely mirror internal call returns, duplicated
-recovery policy, exact private topology guardrails, or abstraction for one hypothetical consumer
-must reduce `PROPORTIONALITY` and block readiness until simplified or justified.
+For state topology, do not equate equal UI projection with redundancy. Distinguish projection
+equivalence, interaction equivalence, and full behavioral equivalence. A collapse is justified only
+when both candidates represent the same business condition and, for every accepted event, have
+equivalent meaning, guards, semantic outputs, next-state behavior, data invariants, cancellation,
+lifetime, persistence, commit/rollback, and recovery semantics.
+
+Assess both directions:
+
+- over-splitting: fully behaviorally equivalent states add no useful meaning;
+- over-collapsing: a merged state reconstructs former alternatives through a mode/phase/operation/
+  retry discriminator, nullable payload matrix, runtime type test, guard cascade, or conditional
+  output/transition dispatcher.
+
+Moving explicit alternatives into a payload and `when` is topology relocation, not simplification.
+Keep separate projection-equivalent states when their types express distinct business facts, data
+guarantees, semantic outputs, commit boundaries, owners, recovery paths, or clearer DSL routes.
+
+A material mechanism without admission evidence is at least a `medium` finding. Events that merely
+mirror internal call returns, duplicated recovery policy, exact private topology guardrails,
+abstraction for one hypothetical consumer, unearned state splitting, hidden state discriminators,
+or topology relocation must reduce `PROPORTIONALITY` and block readiness until simplified or
+justified.
 
 ## Readiness
 

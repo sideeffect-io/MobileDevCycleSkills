@@ -35,9 +35,10 @@ evidence supports another valid choice; `consider` is a prompt and `only when` i
 ## Lean correctness contract
 
 Correctness includes proportionality. Start from the direct design with the fewest owners, public
-seams, states, events, effects, persistence artifacts, and recovery layers that satisfies the
-accepted happy path and named invariants. Add complexity only when the direct baseline demonstrably
-fails an admitted requirement.
+seams, effect families, persistence artifacts, and recovery layers that satisfies the accepted happy
+path and named invariants. Minimize conceptual mechanisms, not raw concrete-state count. A larger set
+of explicit states can be the simpler design when their types preserve business facts, data
+invariants, effect selection, commit boundaries, or sentence-readable routes.
 
 Do not bind or retain a target, protocol, wrapper, factory/environment key, public seam, state,
 event, retry path, correlation identifier, durable checkpoint, recovery layer, validator rule, or
@@ -59,9 +60,18 @@ cost. An existing repository pattern is an available tool, not proof that the cu
 it. Keep each safety or recovery policy at its authoritative owner; duplicate it only through an
 explicit defense-in-depth decision naming the distinct threat protected by both controls.
 
+For state machines, UI projection is intentionally many-to-one. Equal `SuperState` or UI projection
+is not evidence that concrete states are redundant. Treat states as collapse candidates only after
+proving full behavioral equivalence across accepted events, semantic outputs, next-state paths,
+guards, invariants, cancellation, lifetime, persistence, rollback, and recovery. Reject a proposed
+collapse when a mode/phase/operation/retry discriminator, nullable payload matrix, runtime type test,
+or conditional dispatcher merely reconstructs the former alternatives. That is topology relocation,
+not simplification.
+
 Tests and guardrails protect observable behavior, named invariants, public contracts, and forbidden
 architecture. They must not freeze private topology or force extra production concepts solely to
-make an implementation decomposition exhaustively testable.
+make an implementation decomposition exhaustively testable. They also must not force meaningful
+business-state distinctions to disappear merely because those states render identically.
 
 ## Resource routing
 
@@ -139,9 +149,19 @@ actor/coordinator when they completely express the contract. Use SwiftStateMachi
 state-dependent legality, replaceable or long-lived effects, recovery, navigation lifetime,
 correlation, or cross-owner coordination actually requires it.
 
-For state machines, design states around behavioral modes rather than individual async calls. Emit
-no event, one semantic event, or an event sequence according to the resolved SwiftStateMachine API
-and actual decision needs. Read [State-machine feature design](references/state-machine-features.md)
+For state machines, design states around business facts and behavioral modes rather than individual
+async calls. Several states may intentionally share one UI projection. Keep them separate when the
+same event selects different semantic outputs or future paths, their types prove different payload
+availability or invariants, or they mark different owner/commit/rollback/recovery boundaries.
+
+Consider a collapse only when every accepted event has the same meaning, guard, semantic output, and
+behaviorally equivalent next state, with equivalent cancellation, lifetime, persistence, and
+recovery semantics. Merge only when one natural payload captures ordinary data for the same route
+and the resulting DSL is clearer. Never trade explicit states for a discriminator-driven `switch`
+that selects former output families.
+
+Emit no event, one semantic event, or an event sequence according to the resolved SwiftStateMachine
+API and actual decision needs. Read [State-machine feature design](references/state-machine-features.md)
 before binding topology.
 
 ### 6. Make the contract executable
@@ -155,6 +175,10 @@ Define:
 - security/privacy risks and authoritative controls;
 - and how each admitted mechanism can be observed without freezing private topology.
 
+When evaluating a state collapse, require evidence over the accepted event alphabet, semantic output
+selection, next-state behavior, invariants, and recovery—not merely equal UI projections or fewer
+types.
+
 ### 7. Handoff without ambiguity
 
 Architectural handoff must include:
@@ -165,7 +189,8 @@ Architectural handoff must include:
 - required workflow behavior and output cardinality;
 - required sequencing, assumptions, validation, and open risks;
 - `LEAN-BASELINE`: the smallest viable design considered;
-- `ADMITTED-COMPLEXITY`: each material mechanism and its admission evidence;
+- `ADMITTED-COMPLEXITY`: each material mechanism and its admission evidence, including intentionally
+  retained projection-equivalent states when relevant;
 - `REQUIRED-ADVERSE-PATHS`: adverse paths implementation must handle;
 - `DELIBERATELY-UNMODELED`: plausible paths intentionally outside the contract.
 

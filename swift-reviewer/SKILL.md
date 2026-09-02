@@ -42,7 +42,7 @@ state/event family, retry/recovery layer, correlation scheme, durable checkpoint
 implementation-shaped test, identify:
 
 - the acceptance criterion, named invariant, reproduced defect, concrete platform/API requirement,
-  credible named security/privacy/data-loss scenario, or current variation need it protects;
+  credible named safety/privacy/data-loss scenario, or current variation need it protects;
 - the authoritative owner;
 - the simpler alternative considered;
 - why that alternative is insufficient;
@@ -52,6 +52,22 @@ Existing patterns, high reasoning effort, green tests, or additional defensive c
 themselves justify a mechanism. A material mechanism without admission evidence is at least a
 `medium` finding and blocks readiness. Do not recommend removing a named invariant merely to reduce
 code; require the smallest mechanism that preserves it.
+
+State count is not a proportionality metric by itself. `SuperState` or UI state is a lossy,
+many-to-one projection: several concrete states may render identically while preserving different
+business facts, data guarantees, effect selections, commit boundaries, or future routes. Equal UI
+projection may trigger inspection, but it never establishes redundancy.
+
+Review both failure directions:
+
+- **over-splitting:** several concrete states are fully behaviorally equivalent and add no useful
+  meaning or invariant;
+- **over-collapsing:** one state hides meaningful alternatives behind a mode/phase/operation/retry
+  discriminator, nullable payload matrix, runtime type test, or conditional output dispatcher.
+
+Moving a sum type from concrete states into payload and branching is topology relocation, not
+simplification. Prefer the representation that minimizes total semantic and local-reasoning
+complexity while keeping business invariants and routes explicit.
 
 ## Resource routing
 
@@ -106,13 +122,47 @@ conditions.
 
 ### 4. Perform the necessity pass
 
-Ask what the smallest implementation would be that still passes behavioral and invariant evidence.
-Check whether:
+Ask which representation yields the smallest explicit topology and the lowest total reasoning cost
+while still passing behavioral and invariant evidence. Do not assume that fewer concrete states are
+better.
 
-- states differ in legal inputs, observable projection, cancellation/lifetime, recovery, or external
-  outcome rather than only in the next internal command;
+For apparent duplicate states, distinguish:
+
+- **projection equivalence:** equal UI only;
+- **interaction equivalence:** the same event types are accepted;
+- **full behavioral equivalence:** every accepted event has equivalent meaning, guards, semantic
+  outputs, next-state behavior, invariants, and future paths.
+
+Only full behavioral equivalence supports a collapse. Verify whether:
+
+- the states represent the same business condition and prove the same data invariants;
+- every accepted or rejected event has the same meaning in both states;
+- the same event selects the same semantic output and the same or behaviorally equivalent next
+  state;
+- cancellation, replacement, stale-result, correlation, lifetime, persistence, commit/rollback,
+  and recovery semantics are equivalent;
+- differences are ordinary data parameters of one route/effect family rather than operation-kind
+  choices;
+- a natural merged payload exists without invalid combinations.
+
+Also check the inverse. A merge that requires a `kind`, `mode`, `phase`, `operation`, or retry-plan
+discriminator, nullable payload union, runtime type test, guard cascade, or `switch` that chooses
+between former output/transition families has probably relocated topology.
+
+Keep separate states when their type identity expresses a business phase or historical fact, proves
+different data availability, prevents impossible combinations, marks a different owner/commit/
+rollback/recovery boundary, makes the same event select a different semantic output or next path, or
+keeps the DSL declarative and sentence-readable.
+
+For retries, a shared state is appropriate when ordinary data parameterizes one semantic retry
+operation. Distinct retry states are appropriate when Retry selects different effect families,
+business phases, owners, commit boundaries, rollback rules, or recovery paths—even if they share one
+UI and one Retry event. A closed retry plan is acceptable only when it is a meaningful domain
+concept and demonstrably clearer than explicit state alternatives.
+
+Continue checking whether:
+
 - events represent semantic decisions rather than internal function returns;
-- retry variants need distinct legal topology or can use one closed retry plan;
 - correlation is required by real overlap, replacement, stale completion, repeated delivery, or
   cross-owner acknowledgement;
 - persistence protects an accepted process-death or migration obligation;
@@ -121,8 +171,9 @@ Check whether:
 - a one-implementation protocol or wrapper has a current consumer-owned reason to exist.
 
 Classify concrete findings as `state-explosion`, `mechanistic-event-model`, `duplicated-policy`,
-`speculative-recovery`, `unearned-abstraction`, `implementation-fossilizing-guardrail`, or
-`topology-coupled-test` where those labels improve remediation clarity.
+`speculative-recovery`, `unearned-abstraction`, `implementation-fossilizing-guardrail`,
+`topology-coupled-test`, `hidden-state-discriminator`, or `topology-relocation` where those labels
+improve remediation clarity.
 
 ### 5. Validate high-risk claims
 
@@ -137,13 +188,17 @@ model; the score is diagnostic unless the user or repository explicitly makes a 
 
 ## Finding contract
 
-- `blocker`: unsafe to merge due to behavior, build, data integrity, or security/privacy failure.
+- `blocker`: unsafe to merge due to behavior, build, data integrity, or privacy failure.
 - `high`: correctness, lifecycle, architecture, recovery, accessibility, or major test defect.
-- `medium`: concrete maintainability, unjustified mechanism cost, or non-trivial quality gap.
+- `medium`: concrete maintainability, unjustified mechanism cost, hidden topology, or non-trivial
+  quality gap.
 - `low`: bounded cleanup issue.
 
 Each finding includes severity, exact location/evidence, violated contract, impact, required proof,
 and minimal remediation. Material unearned complexity is never reduced to a subjective style note.
+Do not file `state-explosion` merely because several concrete states share a projection; establish
+full behavioral equivalence first. Treat hidden discriminators and topology relocation as concrete
+design defects when they make routes or invariants harder to understand.
 
 ## Review handoff
 
@@ -154,7 +209,8 @@ Before closing, provide:
 - blocked/not-run checks;
 - residual risk;
 - minimal remediation batch;
-- necessity result, including unjustified mechanisms or `NONE`.
+- necessity result, including unjustified mechanisms, justified projection-equivalent states,
+  topology relocation, or `NONE`.
 
 If required evidence is missing, do not mark ready. Route producible implementation evidence to
 `SWIFT_DEVELOPER` as `CHANGES_REQUIRED`; route missing user authority or external state to `ROOT` as
