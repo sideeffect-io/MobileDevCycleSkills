@@ -84,22 +84,94 @@ policy. Keep algorithms and result mapping outside `On` bodies.
 
 ## Behavioral state and event design
 
-A concrete state is justified only when it changes at least one of:
+A concrete state is justified when its identity changes at least one of:
 
+- the business condition or invariant currently known to hold;
 - accepted external events or user actions;
-- observable product/UI behavior;
-- cancellation, replacement, or stale-result semantics;
-- lifetime, persistence, configuration/process-recovery obligations;
+- the semantic output selected for an accepted event;
+- the next-state path or another externally relevant outcome;
+- cancellation, replacement, correlation, or stale-result semantics;
+- lifetime, persistence, commit, rollback, configuration, or process-recovery obligations;
+- data availability that the type must prove;
 - a decision another owner must observe.
 
 A suspending call or sequential phase is not automatically a state. Keep phases inside one output or
 coordinator when no event can legitimately interleave, cancellation/replacement does not differ by
-phase, and recovery need not resume from that exact point.
+phase, recovery need not resume from that exact point, and the phase does not establish a business
+fact or invariant needed by later routes.
 
-Collapse states when they have the same accepted inputs, UI projection, cancellation/lifetime,
-recovery obligations, and external outcome and differ only in the next internal command. Concrete
-states carry exactly the data required for legal future behavior. Project them to a small immutable
-UI state; do not use interacting boolean/null bags that permit impossible combinations.
+### Projection equivalence is not state equivalence
+
+`State.superState` or another UI projection is intentionally many-to-one. Several concrete business
+states may produce the same UI while preserving different facts, payload guarantees, output choices,
+commit boundaries, rollback rules, or future transition paths. Equal UI projection is a prompt to
+inspect the states; it is never sufficient evidence for merging them.
+
+Distinguish three levels:
+
+- **projection-equivalent:** the UI projection is equal;
+- **interaction-equivalent:** the same event types are accepted;
+- **behaviorally equivalent:** every accepted event has equivalent guards, semantic outputs,
+  transitions, invariants, and future behavior.
+
+Only full behavioral equivalence makes states collapse candidates. For every accepted event, both
+states must accept or reject it with the same meaning, select the same semantic output, and move to
+the same state or to states that are themselves behaviorally equivalent. They must also share the
+same cancellation, replacement, correlation, lifetime, persistence, commit/rollback, recovery, and
+data-invariant semantics.
+
+Differences may be ordinary data parameters of the same semantic route or operation. For example,
+`TripIsLoading(tripId)` naturally represents many identifiers because Retry always launches the
+same `LoadTrip` effect family parameterized by `tripId`.
+
+Even when full behavioral equivalence holds, merge only when one natural payload represents both
+cases and the result lowers total conceptual complexity.
+
+### Do not relocate topology into payloads and branches
+
+Do not merge explicit state alternatives when the merged representation must reconstruct them
+through a `kind`, `mode`, `phase`, `operation`, or `retryPlan` discriminator; a nullable-field matrix;
+a runtime type test; or conditional output/transition dispatch. Moving a sealed alternative from
+concrete states into one state's payload or a generic output dispatcher is topology relocation, not
+simplification.
+
+Keep states separate when their type identity:
+
+- names a meaningful business phase or historical fact;
+- proves different data availability or prevents invalid payload combinations;
+- makes the same event select a different semantic output or next-state path;
+- marks a different authoritative owner, commit, rollback, cancellation, persistence, or recovery
+  boundary;
+- keeps the transition table declarative and sentence-readable.
+
+Branching remains valid for genuine data/domain decisions and result mapping. Branching introduced
+only to recover a distinction removed from the concrete state model is evidence that the states
+should probably remain separate.
+
+A useful shorthand is:
+
+> Payload represents data within one behavior. Concrete state alternatives represent different
+> behavior.
+
+For example, these states may deliberately share one Retry UI and the same Retry event while
+remaining behaviorally distinct:
+
+```text
+When LogoutIsAwaitingAuthenticationRetry
+  On LogoutRetryWasRequested
+  -> Output RetryAuthentication
+
+When LogoutIsAwaitingPrivateCleanupRetry
+  On LogoutRetryWasRequested
+  -> Output RetryPrivateCleanup
+```
+
+The first retry concerns the authentication transition; the second concerns a privacy-critical
+cleanup boundary. Collapsing them into `LogoutIsAwaitingRetry(kind = ...)` and branching with
+`when (kind)` would hide rather than remove that topology.
+
+Concrete states carry exactly the data required for legal future behavior. Project them to a small
+immutable UI state; do not use interacting boolean/null bags that permit impossible combinations.
 
 An event represents external intent or a semantic fact that changes machine policy. Do not mirror
 every internal function return as a separate event. Several internal calls may map to one semantic
@@ -134,17 +206,21 @@ repositories, scopes, or DI containers.
 
 ## Retry, correlation, cancellation, and observation
 
-A single closed retry-plan value may be carried by one retry state when all variants have the same:
+A shared retry state is appropriate when its payload parameterizes the same semantic retry
+operation with ordinary data and the Retry route selects the same output family without branching
+over operation kinds. For example, `TripIsAwaitingLoadRetry(tripId)` can retry `LoadTrip(tripId)`
+for any identifier.
 
-- accepted external inputs;
-- UI projection and blocking behavior;
-- lifetime/cancellation/recovery semantics;
-- final outcome;
+Keep distinct retry states when Retry selects different semantic effect families, business phases,
+commit boundaries, authoritative owners, rollback rules, or recovery paths, even when those states
+project to the same UI and accept the same Retry event.
 
-and differ only in the internal command executed by Retry. Separate retry states remain appropriate
-when those semantics differ. Boolean retry flags, nullable command bags, and open executable command
-containers remain forbidden. Repository/result unions should be mapped at the output boundary; only
-outcome distinctions that change machine behavior need separate events.
+A closed retry-plan value remains permissible when it is already a meaningful domain concept and
+demonstrably improves local reasoning. Do not introduce one solely to reduce concrete-state count.
+A `when` with one branch per former retry state is normally hidden topology rather than
+simplification. Boolean retry flags, nullable command bags, and open executable command containers
+remain forbidden. Repository/result unions should be mapped at the output boundary; only outcome
+distinctions that change machine behavior need separate events.
 
 Carry request/generation/observation IDs only when operations can overlap, previous work can be
 replaced, stale completion may arrive, equal outcomes can repeat, or another owner requires an
@@ -195,7 +271,13 @@ mailbox policy, owner cancellation, factory identity/lifetime, and outcome deliv
 paths are part of the contract. Use one coroutine test scheduler, virtual time, and explicit barriers
 rather than sleeps.
 
+When evaluating a collapse, characterize both candidate states across the accepted event alphabet.
+Prove semantic output selection, next-state behavior, guards, cancellation/lifetime, invariants, and
+recovery—not only UI projection. Add a negative test when a merged payload could represent an
+invalid combination or when conditional dispatch would reconstruct the former alternatives.
+
 Tests should protect observable behavior, named invariants, and reproduced regressions. They should
 not require one test per private execution phase, preserve obsolete states/events, or force exact
-private topology. When topology is simplified without changing behavior, update implementation-
-shaped tests and validators in the same focused change.
+private topology. Conversely, do not delete meaningful business states merely to reduce type or test
+counts. When topology is simplified without changing behavior, update implementation-shaped tests
+and validators in the same focused change.

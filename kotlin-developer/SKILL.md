@@ -45,9 +45,17 @@ concrete Android/framework/API requirement, credible named security/privacy/data
 two current consumers requiring variation. Return an architecture contradiction instead of
 inventing the mechanism.
 
+Reducing concrete-state count is not itself simplification. A UI projection is many-to-one, so
+states that render identically may still encode different business facts, effect choices, commit
+boundaries, data guarantees, or future routes. Do not merge them unless their complete accepted
+event-to-output/transition behavior and invariants are equivalent and the merged representation
+reduces total reasoning cost without introducing a discriminator, nullable payload matrix, runtime
+type test, or conditional dispatcher that reconstructs the former alternatives.
+
 Tests protect observable behavior, named invariants, public contracts, and reproduced regressions.
 They must not require extra production topology solely so each private execution phase can be
-asserted independently.
+asserted independently. They also must not pressure the implementation to delete meaningful
+business states merely because several states share one UI projection.
 
 ## Resource routing
 
@@ -113,6 +121,12 @@ A no-event output remains owned by the state-machine runtime. Never launch an un
 simulate fire-and-forget. Keep non-interleavable intermediate results local to one output or
 coordinator and emit only the smallest semantic result needed by the machine.
 
+When several states share one UI projection, inspect their business meaning and complete route
+behavior before considering a merge. If the same event selects different semantic outputs or next
+paths, or state identity proves a different invariant or payload availability, preserve the
+explicit states. A merged state whose `kind`, `phase`, `operation`, or retry-plan payload is examined
+with `when` to select outputs has relocated topology rather than removed it.
+
 ### 4. Keep Compose thin and native
 
 Choose the state owner before using `remember`, `rememberSaveable`, or a `ViewModel`. A Route may
@@ -133,11 +147,17 @@ select a custom agent profile.
 
 ### 5. Perform the subtractive pass
 
-Before final validation and handoff, review the implementation with deletion and collapse as the
-objective:
+Before final validation and handoff, review the implementation with deletion, localization, and
+clarification as the objective:
 
-- merge states with equivalent legal inputs, UI projection, lifetime, cancellation, recovery, and
-  external outcome;
+- inspect apparent duplicate states using full behavioral equivalence, not UI projection alone;
+- merge states only when they represent the same business condition and, for every accepted event,
+  have equivalent guards, semantic outputs, next-state behavior, lifetime, cancellation,
+  persistence, recovery, and invariants;
+- do not merge when the result needs a discriminator, payload union, invalid nullable combination,
+  runtime type test, or conditional output/transition dispatch to reconstruct the old alternatives;
+- preserve separate states when their explicit types make business phases, data guarantees, effect
+  selection, commit boundaries, or DSL routes clearer;
 - move non-interleavable execution phases into local structured control flow;
 - collapse internal result events into the smallest semantic outcome;
 - remove forwarding wrappers and one-implementation interfaces without a consumer-owned boundary;
@@ -146,9 +166,10 @@ objective:
 - remove speculative configuration, extension points, and implementation-shaped tests;
 - keep named safety, privacy, data-integrity, accessibility, lifecycle, and Android invariants.
 
-Escalate when simplification would contradict a binding architecture decision. Do not preserve an
-unearned mechanism merely because tests or validators already encode its private topology; update
-them to protect behavior, invariants, and forbidden boundaries.
+Optimize total semantic and local-reasoning complexity, not type count. Escalate when simplification
+would contradict a binding architecture decision. Do not preserve an unearned mechanism merely
+because tests or validators already encode its private topology; update them to protect behavior,
+invariants, and forbidden boundaries.
 
 ### 6. Verify at owner scope
 
@@ -157,6 +178,11 @@ finite failures, cancellation, stale results, recovery, Flow collection, process
 identity, callbacks, and composition only where applicable. Share one coroutine test scheduler and
 use virtual time or explicit gates rather than sleeps. Use Robolectric or instrumentation only when
 the Android behavior they simulate or execute is part of the proof.
+
+When evaluating a state merge, characterize both candidates across the accepted event alphabet and
+verify semantic output selection, next-state paths, invariants, and recovery—not only their projected
+UI. Include a negative proof when the merged payload could encode an invalid combination or when a
+conditional dispatcher would recreate the former alternatives.
 
 ### 7. Converge with concrete evidence
 
@@ -183,7 +209,7 @@ Return:
 - inspected artifacts and final full-diff audit result;
 - deviations, blockers, not-run checks, and residual risks;
 - `COMPLEXITY-DELTA`: material concepts introduced or removed and their evidence;
-- `SUBTRACTIVE-PASS`: what was merged, localized, deleted, or deliberately avoided;
+- `SUBTRACTIVE-PASS`: what was merged, kept explicit, localized, deleted, or deliberately avoided;
 - `ENVELOPE-DEVIATIONS`: `NONE` or the exact required escalation.
 
 If incomplete, distinguish an architecture contradiction from a user/authority/external-state
