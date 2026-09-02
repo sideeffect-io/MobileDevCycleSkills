@@ -12,6 +12,11 @@ Own assessment and convergence. In a lifecycle Reviewer role, assess independent
 loads this skill after `TRIVIAL` implementation, perform the same focused checks as a same-agent
 self-review and do not claim independent provenance.
 
+This skill is authoritative for reusable Swift review and Reviewer-role guidance. Repository
+instructions own product facts, concrete owners, dependency pins, local validation, scoring policy,
+and stricter project-specific constraints; they should point here rather than restating generic
+doctrine.
+
 ## Operating contract
 
 1. Read applicable `AGENTS.md`, repository guidance, request, and the one current lifecycle handoff
@@ -77,7 +82,7 @@ Load only rows needed for the review.
 | --- | --- |
 | End-to-end passes, evidence order, engineering signals | [Review method](references/review-method.md) |
 | Severity calibration and recurring Swift findings | [Finding catalog](references/finding-catalog.md) |
-| Inter-agent lifecycle transition | [Swift handoff contract](references/handoff-contract.md) |
+| Inter-agent lifecycle transition without a complete repository-local contract | [Swift handoff contract](references/handoff-contract.md) |
 | Compiler/toolchain, Apple products, runtime/security proof | [Toolchain and platform verification](references/toolchain-and-platform-validation.md) |
 | Dimensions, weights, evidence caps, gates, readiness | [Quality model](references/quality-model.md) |
 | Finding routing, feedback batches, re-review | [Feedback loop](references/feedback-loop.md) |
@@ -218,9 +223,14 @@ If required evidence is missing, do not mark ready. Route producible implementat
 
 ## Handoff contract
 
-Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
-[Swift handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `SWIFT-HANDOFF/1` block.
+Use a handoff only when an inter-agent lifecycle requires one. If applicable repository guidance
+defines a complete local handoff schema, transition table, validation contract, and correction
+routing, use that contract as the sole handoff-format authority and do not load the generic reference
+merely to merge duplicate instructions. Repository-local handoff rules may add project fields,
+limits, scoring, or routes, but they do not redefine this skill's reusable Reviewer doctrine.
+
+Otherwise read and follow the [Swift handoff contract](references/handoff-contract.md) before
+emitting exactly one `SWIFT-HANDOFF/1` block.
 
 - A ready implementation routes `APPROVED` to `COMPLETE` only when applicable hard gates pass and no
   `blocker`, `high`, or `medium` finding remains.
