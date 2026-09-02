@@ -96,6 +96,32 @@ Mark the request `SPEC_NOT_READY` when at least one material gap remains, includ
 Do not block readiness merely because file locations, architecture, dependencies, framework APIs,
 implementation mechanics, test commands, or validation strategy remain for downstream roles.
 
+## Behavioral scope and adverse-path admission
+
+Specification quality includes proportionality. Define the smallest observable product contract
+that fulfills the user's objective; do not maximize the set of paths merely because they can be
+imagined or modelled.
+
+An adverse path belongs in `ACCEPTANCE` or `BINDING` only when at least one of these applies:
+
+- the user explicitly requests the behavior;
+- the path is user-visible and materially affects the requested outcome;
+- an existing named security, privacy, data-integrity, accessibility, lifecycle, or platform
+  invariant requires it;
+- a concrete platform/API contract makes the decision unavoidable;
+- a reproduced defect or established product behavior must be preserved or changed.
+
+Do not promote hypothetical network failures, process death, duplicate delivery, stale results,
+cancellation races, retries, rollback, migration, or recovery into binding behavior solely because
+robust software could account for them. Put strongly evidenced, low-risk defaults in `ASSUMPTIONS`.
+Put speculative robustness and deliberately unsupported cases in `OUT-OF-SCOPE` when documenting
+them prevents downstream over-implementation.
+
+Ask the user only when different answers would materially change observable behavior, safety,
+privacy, irreversible data handling, or a required platform contract. A technical mechanism—such
+as a state machine, checkpoint, correlation ID, retry layer, or rollback protocol—is never a
+specifier question unless the user is explicitly defining a technical library contract.
+
 ## Question loop
 
 For `SPEC_NOT_READY`, ask only questions whose answers can materially change the implementation:
@@ -151,7 +177,7 @@ or:
 OUT-OF-SCOPE:
 - NONE
 or:
-- <explicitly excluded behavior>
+- <explicitly excluded behavior or deliberately unmodeled adverse path>
 
 BLOCKERS:
 - NONE
@@ -170,7 +196,8 @@ NEXT: REFINE_SPEC | CLASSIFY_COMPLEXITY
 
 For `SPEC_READY`, `BLOCKERS` and `QUESTIONS` must both be `NONE`, and `NEXT` must be
 `CLASSIFY_COMPLEXITY`. Keep `OBJECTIVE`, `ACCEPTANCE`, and `BINDING` precise enough to seed the
-downstream Swift or Kotlin lifecycle handoff.
+downstream Swift or Kotlin lifecycle handoff. Use `OUT-OF-SCOPE` to prevent a plausible but
+unrequired edge path from silently becoming implementation scope.
 
 For `SPEC_NOT_READY`, `BLOCKERS` must name at least one material gap and `NEXT` must be
 `REFINE_SPEC`. Include the actionable user questions in `QUESTIONS`; use `NONE` only when the sole

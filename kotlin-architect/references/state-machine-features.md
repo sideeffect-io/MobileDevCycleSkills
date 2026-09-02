@@ -12,148 +12,190 @@ consumer's repository-approved version or revision.
 
 ## Ground the API first
 
-Kotlin State Machine evolves independently of this skill. Resolve the consumer's exact version,
-read that revision's README, then inspect public source and downstream tests before writing DSL
-code. The README establishes concepts and modules; compiled public source/tests settle signatures
-and semantics. Check Kotlin metadata, JVM target, coroutines, Compose runtime, and Android toolchain
-compatibility as well as dependency coordinates. Never suppress metadata incompatibility with
-`-Xskip-metadata-version-check`.
+Resolve the consumer's exact version, read that revision's README, then inspect public source and
+downstream tests before writing DSL code. Compiled public source/tests settle signatures and
+semantics. Check Kotlin metadata, JVM target, coroutines, Compose runtime, and Android toolchain
+compatibility. Never suppress metadata incompatibility with `-Xskip-metadata-version-check`.
 
-At the currently inspected API, `StateMachineFlow` owns a serialized bounded event mailbox;
-collection observes committed states and does not drive execution. The owner supplies its
-`CoroutineScope`. `trySend`, `sendSuspending`, and `sendAndWait` have different capacity/completion
-contracts. `finishAndWait` is the deterministic shutdown barrier. Re-inspect before relying on any
-of these details.
+At the currently inspected API:
 
-## Default for significant business areas
+- `Output` accepts a suspending side effect returning `EventSet?`;
+- a non-null value becomes a one-element event Flow;
+- `null` produces no event;
+- `OutputFlow` accepts a suspending side effect returning `Flow<EventSet>` for zero-to-many events;
+- the runtime owns the output Job and optional cancellation policy.
 
-Use a state machine for a feature/navigation workflow with persistent modes, state-dependent legal
-events, asynchronous outputs, retry/recovery, replacement/correlation, subscription lifetime, or
-cross-feature coordination. Use pure functions and local Compose state for stateless validation or
-transient UI element state. Do not create an empty machine for structural uniformity.
+`StateMachineFlow` owns a serialized bounded event mailbox; collection observes committed states and
+does not drive execution. `trySend`, `sendSuspending`, `sendAndWait`, and `finishAndWait` have
+different contracts. Re-inspect the resolved revision before relying on these details.
+
+## Mechanism admission
+
+A significant business name does not by itself require a state machine. Use Kotlin State Machine
+when accepted behavior genuinely needs one or more of:
+
+- persistent state-dependent legality;
+- replaceable or long-lived asynchronous outputs;
+- cancellation or stale-result decisions;
+- retry/recovery modes visible to the workflow;
+- Navigation, Android component, or process lifetime;
+- correlation or cross-owner coordination.
+
+Prefer pure functions for validation/projection, local Compose state for transient presentation, one
+structured suspending function for a non-interleavable operation, or a small coordinator when those
+mechanisms completely express the contract. Do not create an empty machine or empty Outputs file
+for structural uniformity.
 
 Model the extended Mealy loop:
 
 ```text
 (current State, Event) -> (optional next State, optional Output)
-Output -> suspend effect -> Event -> machine
+Output -> zero, one, or many semantic Events -> machine
 ```
 
-States/events are inert immutable values. Each asynchronous result returns through an event. The
-machine is free of Retrofit/Room/Firebase/Android clients, repositories, data sources, Hilt, and
-global containers.
+States/events are inert immutable values. The machine is free of Retrofit, Room, Firebase, Android
+clients, repositories, data sources, Hilt, dispatchers, and global containers.
 
-Before implementation, define the machine's business owner, initial state, scope/lifetime,
-activation, complete state/event vocabulary, outputs and injected capabilities, transitions,
-result events, cancellation/correlation/recovery, semantic outcomes, and interactions. These are
-responsibilities represented by the canonical Feature-owner files described in
-[Architecture layers](architecture-layers.md): `<Owner>States.kt`, `<Owner>Events.kt`,
-`<Owner>Outputs.kt`, and `<Owner>StateMachine.kt`. Additional cohesive machine support may sit
-beside them. If the workflow has no outputs, keep a package-only Outputs file; do not invent output
-types or an otherwise unnecessary machine for structural symmetry.
+Before implementation, define the business owner, initial state, scope/lifetime, activation,
+accepted behavioral modes and intents, outputs/capabilities, transition rules, output cardinality,
+required cancellation/correlation/recovery, semantic outcomes, and owner interactions. A
+repository's canonical file layout organizes an admitted machine; it never proves that a machine or
+every file is necessary.
 
-## Naming, state, and event design
+## Naming and route readability
 
-Follow repository naming first. Prefer concrete state names that describe a present condition,
-events that describe intent or a completed fact, and output/capability names that describe a use
-case. Keep concrete states/events/routes internal unless another module genuinely consumes them.
+Follow repository naming first. Prefer `<Owner>Is<PresentCondition>` states and intent or semantic-
+fact events such as `<Owner><Operation>WasRequested` and `<Owner><Operation>DidSucceed`. Keep
+concrete states, events, guards, retry plans, and routes internal unless another module genuinely
+consumes them.
 
-For Kotlin State Machine DSLs, make the transition table readable as sentences. Keep sealed state
-and event sets, but flatten concrete alternatives. Prefer `<Owner>Is<PresentCondition>` states and
-observed-fact events such as `<Owner><Operation>WasRequested` or
-`<Owner><Operation>DidSucceed`. Each `When` / `On` route must visibly identify the concrete current
-state and concrete event, plus the literal next state whenever it transitions and any named output.
-An accepted route may transition, start an output while preserving state, or do both.
+Keep `When`/`On` routes sentence-readable. Each route visibly identifies the concrete current state,
+concrete event, literal next state when transitioning, and named output. An accepted route may
+transition, start an output while preserving state, or do both.
 
-Concrete states carry exactly the data required for legal future transitions. Project them to one
-small immutable UI state through `State.superState` or an explicit pure mapping. Do not use a bag of
-independent booleans/nullables when a sealed alternative prevents impossible combinations.
+Keep route bodies declarative. Use literal concrete state constructors/objects or `state.copy(...)`
+with a visible value change. Do not hide target states in helpers, local generic values, branching,
+or loop-generated routes. Helpers may build arguments, plans, outputs, or semantic events but must
+not accept or return DSL route types. An illegal or rejected input selects no route and starts no
+output; an equal-state transition is not a substitute.
 
-Map implementation failures to finite feature/domain failures. Never expose exception messages as
-product copy. If work can be replaced, carry a request/generation/observation ID in active state and
-completion events; a named guard rejects stale results.
+Use capture-free named guards only for correlation, stale rejection, capability, and genuine value
+policy. Keep algorithms and result mapping outside `On` bodies.
 
-## Direct route grammar and atomic topology
+## Behavioral state and event design
 
-Keep route bodies declarative. A transition target is a literal concrete state constructor/object,
-or `state.copy(...)` with a visible value change. Never hide the target behind a state-returning
-helper, local `nextState`, generic `state`, `if`/`when`, loop-generated routes, or an implicit DSL
-receiver. Helpers may build constructor arguments, commands, plans, outputs, or atomic events; they
-must not accept or return DSL route types.
+A concrete state is justified only when it changes at least one of:
 
-An empty copy, a copy that only reassigns current values, or reconstruction of an equal state is an
-observable transition, not a no-route operation. If an event is illegal, stale, or rejected by
-policy, select no route and start no output. Preserve rejection before both state and effect when
-refactoring; never move a capability check behind the effect merely to simplify a route.
+- accepted external events or user actions;
+- observable product/UI behavior;
+- cancellation, replacement, or stale-result semantics;
+- lifetime, persistence, configuration/process-recovery obligations;
+- a decision another owner must observe.
 
-Represent mutually exclusive outcomes as atomic event types emitted by the output boundary. Do not
-put a repository/result union, success flag, retry enum, nullable retry command, or equivalent
-discriminator inside a machine event or state and recover the alternative with guards. When retry
-changes legal future events, model an explicit operation-specific retry state and a separate
-non-retry failure state.
+A suspending call or sequential phase is not automatically a state. Keep phases inside one output or
+coordinator when no event can legitimately interleave, cancellation/replacement does not differ by
+phase, and recovery need not resume from that exact point.
 
-Use capture-free named top-level or private-object guards only for correlation, stale rejection,
-capability, and genuine value policy. Use an event type directly for cancellation when sufficient;
-value-dependent cancellation uses a capture-free named policy function reference. Keep `if`,
-`when`, algorithms, and result mapping outside `On` bodies. Output helpers may branch on capability
-results, but must return outcome-specific atomic events.
+Collapse states when they have the same accepted inputs, UI projection, cancellation/lifetime,
+recovery obligations, and external outcome and differ only in the next internal command. Concrete
+states carry exactly the data required for legal future behavior. Project them to a small immutable
+UI state; do not use interacting boolean/null bags that permit impossible combinations.
 
-## Outputs, cancellation, and observation
+An event represents external intent or a semantic fact that changes machine policy. Do not mirror
+every internal function return as a separate event. Several internal calls may map to one semantic
+outcome when their intermediate distinctions do not change legal future behavior.
 
-Machine construction and transition selection stay side-effect free. Start work through an explicit
-activation/intent event. Inject ready-to-use suspending functions or cohesive interfaces. An Output
-may orchestrate them and map results to events; it does not discover concrete providers.
+Map SDK/repository failures to finite feature/domain values. Never expose exception messages as
+product copy. Rethrow `CancellationException`.
 
-Rethrow `CancellationException`. Define cancellation for every long-lived or replaceable Output.
-The runtime owns the Output Job; do not replace it through an Output context. Cancellation is
-cooperative, so correlation remains necessary for non-cooperative dependencies.
+## Output cardinality and orchestration
 
-Define Flow observation owner, sharing/buffer policy, termination, retry, and stale-delivery policy.
-Screen visibility is not automatically repository observation lifetime. Never collect the same
-cold/unicast producer multiple times accidentally to create duplicate work.
+Choose cardinality from semantics, not the number of suspending calls:
+
+- **One event:** use `Output` when one semantic outcome changes the next machine decision.
+- **Event stream:** use `OutputFlow` for genuine zero-to-many observation or production over time.
+- **No event:** return `null` from `Output` only when the effect is fully contained and its result
+  cannot affect legal state, user-visible feedback, Navigation, acknowledgement, privacy, data
+  integrity, retry, or recovery.
+
+A no-event output remains owned by the state-machine runtime. It does not authorize `GlobalScope`, a
+new unowned scope, or a detached coroutine. If failure can expose prior-account data, lose accepted
+data, or decide whether the workflow may continue, resolve it authoritatively inside the output or
+emit a semantic event.
+
+An output may orchestrate several injected suspending operations in required order and keep
+intermediate results local when the sequence is non-interleavable. Emit the smallest semantic event
+that changes machine policy. Do not create marker-write, cache-clear, runtime-suspend, or similar
+states/events merely because each operation suspends.
+
+Inject ready-to-use suspending functions or cohesive capability interfaces. An output owns
+orchestration and semantic result mapping; it never discovers concrete providers, SDK clients,
+repositories, scopes, or DI containers.
+
+## Retry, correlation, cancellation, and observation
+
+A single closed retry-plan value may be carried by one retry state when all variants have the same:
+
+- accepted external inputs;
+- UI projection and blocking behavior;
+- lifetime/cancellation/recovery semantics;
+- final outcome;
+
+and differ only in the internal command executed by Retry. Separate retry states remain appropriate
+when those semantics differ. Boolean retry flags, nullable command bags, and open executable command
+containers remain forbidden. Repository/result unions should be mapped at the output boundary; only
+outcome distinctions that change machine behavior need separate events.
+
+Carry request/generation/observation IDs only when operations can overlap, previous work can be
+replaced, stale completion may arrive, equal outcomes can repeat, or another owner requires an
+acknowledgement protocol. A proved serialized or single-flight owner does not need per-phase
+correlation merely for uniformity.
+
+Define cancellation for every long-lived or replaceable output. The runtime owns the output Job; do
+not replace it through an output context. Cancellation is cooperative, so retain correlation when a
+non-cooperative dependency can produce a stale result after replacement.
+
+Define Flow observation owner, sharing/buffer policy, termination, retry, and stale-delivery policy
+only to the degree required by the accepted behavior. Screen visibility is not automatically
+repository observation lifetime. Do not collect one cold/unicast producer multiple times
+accidentally.
 
 ## ViewModel and Compose ownership
 
-Use `viewModelScope` when the machine belongs to a screen/navigation destination and must survive
-configuration changes. Expose immutable `StateFlow` and collect it in a Route with
-`collectAsStateWithLifecycle()`. The Route passes state and semantic callbacks to a stateless Screen.
-Do not expose the mutable machine throughout the composable tree.
+Use `viewModelScope` when the machine belongs to a destination and must survive configuration
+changes. Expose immutable `StateFlow` and collect it in a Route with
+`collectAsStateWithLifecycle()`. The Route passes state and semantic callbacks to a stateless
+Screen; do not expose the mutable machine throughout the composable tree.
 
 With Hilt, inject a cohesive machine factory into the `@HiltViewModel` and create the machine once
-with `viewModelScope`. Pass destination identity or another runtime navigation value through an
-assisted ViewModel factory; let the Route obtain it with assisted `hiltViewModel` and a stable
-identity key. The machine factory may receive injected effect capabilities, repositories, and ID
-providers, but Hilt must not provide the machine or scope themselves. This keeps cancellation and
-machine ownership compiler-visible and lets direct tests instantiate the ViewModel/factory without
-building a Hilt component.
-
-Use `ComposeStateMachineFactory` and `rememberStateMachine(factory)` only when the machine should be
-created and finished with the composition. When a ViewModel or longer-lived owner owns the machine,
-`rememberStateMachine(machine)` observes it without taking execution ownership. Use
-`PreviewStateMachine` for synchronous previews/presentation tests where supported by the resolved
-module.
+with `viewModelScope`. Use assisted injection for runtime destination identity. Hilt must not provide
+the machine or its scope. Use `rememberStateMachine(factory)` only when composition intentionally
+owns creation and shutdown; otherwise observe the longer-lived machine without taking ownership.
 
 Choose mailbox rejection behavior explicitly. `trySend` returning `false` is not success; disable
-duplicate UI actions, log a privacy-safe metric, expose the result, or use `sendSuspending` from an
-owned coroutine when waiting for capacity is required.
+duplicate actions, expose/log the bounded failure safely, or use `sendSuspending` from an owned
+coroutine when waiting is required.
 
 ## Communication and decomposition
 
-For normal hierarchy, a child emits a semantic outcome/callback and its parent navigation/feature
-owner translates it. A child does not store the parent's state machine or routes. Pass identifiers
-or irretrievable transient domain payloads rather than prepared child state or repository objects.
+A child emits a semantic outcome/callback and its parent Navigation/Feature owner translates it.
+The child does not store parent routes or machine types. Pass stable identifiers or irretrievable
+transient domain payloads, not prepared state or repository objects.
 
-Before connecting machines, record producer, consumer, payload, correlation, cancellation, and
-lifetime owner. Split only at a stable independently meaningful workflow boundary with its own
-vocabulary, effects, tests, and outcome contract. Use mediator-style collaboration only when
-independent machines truly require peer communication and the resolved runtime supports it.
+Before connecting machines, record producer, consumer, payload, required correlation,
+cancellation, and lifetime owner. Split only at a stable independently meaningful workflow boundary
+with its own vocabulary, effects, tests, and outcome contract. Use peer mediation only when
+independent machines truly require it. File size alone justifies neither splitting nor retention.
 
 ## Required tests
 
-Cover legal journeys, forbidden State/Event pairs, both sides of guards, output success/failure,
-cancellation, stale results, retries, observation termination, activation/replacement, repeated
-outcomes, mailbox rejection policy, owner cancellation, factory identity/lifetime, and callback
-delivery. For every forbidden pair and rejected guard side, assert both that no state
-transition/emission occurs and that no output capability runs; an equal-state transition does not
-prove rejection. Use `statemachine-debug` helpers and `kotlinx-coroutines-test` when compatible with
-the consumer. Await explicit barriers or virtual time; do not sequence with sleeps.
+Cover accepted legal journeys, required forbidden state/event pairs, named guards, semantic output
+success/failure, cancellation/replacement, stale results, retry behavior, observation termination,
+mailbox policy, owner cancellation, factory identity/lifetime, and outcome delivery only where those
+paths are part of the contract. Use one coroutine test scheduler, virtual time, and explicit barriers
+rather than sleeps.
+
+Tests should protect observable behavior, named invariants, and reproduced regressions. They should
+not require one test per private execution phase, preserve obsolete states/events, or force exact
+private topology. When topology is simplified without changing behavior, update implementation-
+shaped tests and validators in the same focused change.

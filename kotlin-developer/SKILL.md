@@ -20,14 +20,34 @@ executable evidence. Never self-approve, and never redesign unsettled architectu
    unrelated edits.
 3. Treat compiled APIs, resolved graphs, build files, source, and tests as source of truth.
 4. Preserve behavior unless the requested outcome or architecture contract explicitly changes it.
-5. Implement one compiling slice at a time and verify incrementally.
-6. Before changing a third-party dependency, plugin, repository, version, or pin policy, verify the
+5. Treat accepted architecture as a maximum complexity envelope, not a target whose every optional
+   mechanism must be instantiated.
+6. Implement one compiling slice at a time and verify incrementally.
+7. Before changing a third-party dependency, plugin, repository, version, or pin policy, verify the
    required architecture decision and user approval.
-7. Escalate product-intent, scope, risk, approvals, and external-state decisions with concrete
+8. Escalate product-intent, scope, risk, approvals, and external-state decisions with concrete
    options.
 
 Read `must`, `never`, and `required` as contracts; `prefer` is an evidenced default; `consider` is
 optional.
+
+## Lean implementation contract
+
+Implement the least conceptually complex code that satisfies accepted behavior, named invariants,
+repository boundaries, and the Architect's admitted mechanisms. Do not add a Gradle module,
+interface, wrapper, factory, DI seam, public API, state, event, retry path, correlation identifier,
+durable checkpoint, recovery layer, validator rule, or implementation-shaped test merely for
+symmetry, generic best practice, future-proofing, mockability, or a hypothetical failure.
+
+Do not expand the architecture envelope silently. A material mechanism not present in the handoff
+requires an acceptance criterion, named invariant or architecture decision, reproduced defect,
+concrete Android/framework/API requirement, credible named security/privacy/data-loss scenario, or
+two current consumers requiring variation. Return an architecture contradiction instead of
+inventing the mechanism.
+
+Tests protect observable behavior, named invariants, public contracts, and reproduced regressions.
+They must not require extra production topology solely so each private execution phase can be
+asserted independently.
 
 ## Resource routing
 
@@ -52,13 +72,14 @@ Use `assets/ProductionExample` as a compiled example only.
 
 ### 1. Make the contract executable
 
-Restate observable behavior, finite failures, effects, cancellation and lifetime, process recovery,
-accessibility/localization, performance risk, and acceptance tests. Read tests before editing; add
-characterization tests when preserved behavior is unclear.
+Restate observable behavior, admitted adverse paths, deliberately unmodeled paths, finite failures,
+effects, cancellation/lifetime, process recovery, accessibility/localization, performance risk, and
+acceptance tests. Read tests before editing; add characterization tests when preserved behavior is
+unclear.
 
 Before editing, run a focused architecture-contradiction check covering ownership, Gradle direction,
-public APIs, source of truth, and workflow seams. Return contradictions to the Architect rather than
-inventing new architecture.
+public APIs, source of truth, workflow seams, and the admitted-complexity ledger. Return
+contradictions to the Architect rather than inventing new architecture.
 
 ### 2. Build behavior before presentation
 
@@ -69,20 +90,28 @@ not hide I/O, mutation, or unbounded concurrency inside transformations.
 
 Keep repository implementations and data sources in their data owner, generic technology wrappers
 in Frameworks, and concrete assembly in app/component composition. Use narrow suspending functions,
-`fun interface` values, or cohesive interfaces; do not pass service locators or broad containers
-into UI or workflows.
+`fun interface` values, or cohesive interfaces only at real consumer-owned or variation boundaries;
+do not pass service locators or broad containers into UI or workflows.
 
 ### 3. Make concurrency and workflow lifetime explicit
 
 Identify scope, `Job`, dispatcher, collection, callback, and component ownership before launching
-work. Prefer structured concurrency, cooperative cancellation, main-safe repositories, correlated
-results, and stale-result guards. Rethrow `CancellationException`; never use `GlobalScope`, extra
-supervision, dispatcher changes, or broad catches merely to silence a symptom.
+work. Prefer structured concurrency, cooperative cancellation, main-safe repositories, and stale-
+result guards only when replacement or late completion can actually occur. Rethrow
+`CancellationException`; never use `GlobalScope`, extra supervision, dispatcher changes, or broad
+catches merely to silence a symptom.
 
-For Kotlin State Machine work, follow the architecture-defined owner, lifetime, states, events,
-outputs, capabilities, transitions, result events, cancellation, correlation, recovery, and machine
-communication. Read the state-machine implementation reference, resolve the actual dependency
-revision, and compile against its public API.
+For Kotlin State Machine work, implement behavioral modes and semantic events rather than one state
+or event per suspending call. Resolve the actual dependency revision and choose output cardinality
+intentionally:
+
+- use `Output` returning one `EventSet` when one semantic outcome changes the next decision;
+- use `OutputFlow` returning `Flow<EventSet>` for genuine zero-to-many observation or production;
+- let `Output` return `null` when a fully contained best-effort effect needs no machine decision.
+
+A no-event output remains owned by the state-machine runtime. Never launch an unowned coroutine to
+simulate fire-and-forget. Keep non-interleavable intermediate results local to one output or
+coordinator and emit only the smallest semantic result needed by the machine.
 
 ### 4. Keep Compose thin and native
 
@@ -102,24 +131,43 @@ select a custom agent profile.
 | Emulator, permission, process, or UI behavior | Android emulator QA | `test-android-apps:android-emulator-qa` | launch, interaction, lifecycle, logcat, and screenshot evidence |
 | Jank, startup, CPU, memory, or leak risk | Android performance | `test-android-apps:android-performance` | Perfetto, Simpleperf, frame, memory, and heap evidence |
 
-### 5. Verify at owner scope
+### 5. Perform the subtractive pass
+
+Before final validation and handoff, review the implementation with deletion and collapse as the
+objective:
+
+- merge states with equivalent legal inputs, UI projection, lifetime, cancellation, recovery, and
+  external outcome;
+- move non-interleavable execution phases into local structured control flow;
+- collapse internal result events into the smallest semantic outcome;
+- remove forwarding wrappers and one-implementation interfaces without a consumer-owned boundary;
+- remove duplicate validation, retry, correlation, or recovery policy already guaranteed by an
+  authoritative owner;
+- remove speculative configuration, extension points, and implementation-shaped tests;
+- keep named safety, privacy, data-integrity, accessibility, lifecycle, and Android invariants.
+
+Escalate when simplification would contradict a binding architecture decision. Do not preserve an
+unearned mechanism merely because tests or validators already encode its private topology; update
+them to protect behavior, invariants, and forbidden boundaries.
+
+### 6. Verify at owner scope
 
 Test pure policy without Android scaffolding. Test legal and forbidden journeys, effect mapping,
 finite failures, cancellation, stale results, recovery, Flow collection, process/lifecycle behavior,
-identity, callbacks, and composition at the narrowest owner. Share one coroutine test scheduler and
+identity, callbacks, and composition only where applicable. Share one coroutine test scheduler and
 use virtual time or explicit gates rather than sleeps. Use Robolectric or instrumentation only when
 the Android behavior they simulate or execute is part of the proof.
 
-### 6. Converge with concrete evidence
+### 7. Converge with concrete evidence
 
 Format touched Kotlin files only with repository tooling. Run the narrowest proving checks first,
 then expand by risk through owner tests, module/variant compilation, lint/static and architecture/
-resource gates, app integration, emulator/device flows, release/R8, and profiling. Separate required,
-blocked, skipped, and not-run checks explicitly.
+resource gates, app integration, emulator/device flows, release/R8, and profiling. Separate
+required, blocked, skipped, and not-run checks explicitly.
 
-Reconstruct the complete scoped diff and affected consumers, inspect referenced reports/logs/
-screenshots/traces, rerun checks after remediations, and rerun the applicable final set before
-handoff. A path or successful assembly alone is not behavior proof.
+Reconstruct the complete scoped diff and affected consumers, inspect referenced artifacts, rerun
+checks after remediations, and rerun the applicable final set before handoff. A path or successful
+assembly alone is not behavior proof.
 
 Run `scripts/validate_examples.sh` after changing the compiled example. Set
 `RUN_ANDROID_TESTS=1` with a connected emulator or device to execute Compose semantics and callback
@@ -133,7 +181,10 @@ Return:
 - changed files and dependency/API changes;
 - exact commands, Gradle tasks, variants/devices, and outcomes;
 - inspected artifacts and final full-diff audit result;
-- deviations, blockers, not-run checks, and residual risks.
+- deviations, blockers, not-run checks, and residual risks;
+- `COMPLEXITY-DELTA`: material concepts introduced or removed and their evidence;
+- `SUBTRACTIVE-PASS`: what was merged, localized, deleted, or deliberately avoided;
+- `ENVELOPE-DEVIATIONS`: `NONE` or the exact required escalation.
 
 If incomplete, distinguish an architecture contradiction from a user/authority/external-state
 blocker and route it through the repository lifecycle instead of inventing a `needs_input` status.
@@ -142,7 +193,8 @@ blocker and route it through the repository lifecycle instead of inventing a `ne
 
 Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
 [Kotlin handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `KOTLIN-HANDOFF/1` block.
+contract, before emitting exactly one `KOTLIN-HANDOFF/1` block. Put the three implementation
+complexity entries in `CURRENT-STATE` unless a stricter repository contract places them elsewhere.
 
 - Completed implementation routes `READY` to `KOTLIN_REVIEWER`.
 - An architecture contradiction routes `CHANGES_REQUIRED` to `KOTLIN_ARCHITECT`.
