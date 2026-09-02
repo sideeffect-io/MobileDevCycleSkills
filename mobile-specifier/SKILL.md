@@ -10,6 +10,11 @@ user's request in the live repository, resolve only material product ambiguities
 canonical `MOBILE-SPEC/1` block. Do not implement, edit files, classify complexity, design the
 architecture, or invoke downstream lifecycle roles.
 
+This skill is authoritative for reusable native-mobile specification readiness, behavioral scope,
+adverse-path admission, and question-loop guidance. Repository instructions own product facts,
+current behavior, local policy, routing, and stricter project-specific constraints; they should
+point here rather than restating this generic contract.
+
 ## Scope
 
 Use this skill only when a repository router explicitly invokes `$mobile-specifier` for a request
