@@ -205,7 +205,10 @@ output or adapter boundary. Treat cancellation as cancellation, not a business f
 
 ## Output cardinality and orchestration
 
-Choose output cardinality from semantics, not from the number of suspending calls:
+Output cardinality and internal execution topology are independent decisions.
+
+Choose output cardinality from machine semantics, not from the number of injected functions or
+asynchronous calls:
 
 - **One optional event:** use the optional-event initializer when one semantic outcome changes the
   machine's next decision.
@@ -220,14 +223,51 @@ to launch a detached or unstructured `Task`. If failure can expose prior-account
 data, or decide whether the workflow may continue, resolve it authoritatively inside the output or
 emit a semantic event.
 
-An output may call several injected operations in required order and keep their intermediate
-results local when the sequence is non-interleavable. Emit the smallest semantic event that changes
-the machine's policy. Do not expose marker-write, cache-clear, runtime-suspend, or similar internal
-steps as separate states/events merely because each operation is async.
+One `Output` may invoke one or several injected functions when they form one cohesive business
+effect. Its internal execution may be:
+
+- **sequential** when ordering, a data dependency, a transaction boundary, or a business invariant
+  requires one operation to finish before another starts;
+- **concurrent** when the operations are independent and parallel execution serves the accepted
+  behavior, such as reducing latency for unrelated reads or cleanup operations;
+- **mixed** when a small explicit dependency graph requires sequential stages containing one or
+  more concurrent groups.
+
+Use structured concurrency owned by the `Output`, such as `async let`, `withTaskGroup`, or
+`withThrowingTaskGroup`. Every child task must complete or be cancelled before the output finishes.
+Do not use `Task.detached` or another unstructured task to hide work from the output lifetime.
+
+Parallelize only semantically independent operations. Keep execution sequential when one result
+feeds another operation, order is observable, the operations share mutable or transactional state,
+or concurrency could violate a privacy, data-integrity, rate-limit, resource, or platform invariant.
+Choose and document aggregate failure behavior: fail fast when one failure invalidates the cohesive
+effect, or collect independent results when the business contract requires a combined outcome.
+Cancellation must propagate through the structured child tasks.
+
+For example, three independent cleanup capabilities may run concurrently and produce one aggregate
+machine event:
+
+```swift
+let cleanupOutput = Output<AppState, AppEvent> {
+  async let widgetResult = clearWidgetData()
+  async let exportResult = clearTransientExports()
+  async let handoffResult = clearRouteHandoffs()
+
+  let results = await (widgetResult, exportResult, handoffResult)
+  return CleanupDidFinish(summary: summarize(results))
+}
+```
+
+The same internal execution could validly return `nil` when every result is fully handled and no
+machine decision depends on it, or produce an `AsyncSequence` when multiple events over time are
+semantically meaningful. Do not emit one event per invoked function merely because functions run
+separately or concurrently. Keep intermediate results local and emit the smallest semantic event
+cardinality required by the machine.
 
 Inject effectful operations through `@Sendable` closures or a cohesive `Sendable` capability value.
-The output owns orchestration and result mapping but never discovers the concrete implementation.
-App composition constructs concrete Frameworks/Datasources and closes over their operations.
+The output owns orchestration, child-task lifetime, cancellation, failure aggregation, and result
+mapping but never discovers the concrete implementation. App composition constructs concrete
+Frameworks/Datasources and closes over their operations.
 
 ## Retry, correlation, cancellation, and observation
 
@@ -299,6 +339,11 @@ When evaluating a collapse, characterize both candidate states across the accept
 Prove semantic output selection, next-state behavior, guards, cancellation/lifetime, invariants, and
 recovery—not only UI projection. Add a negative test when a merged payload could represent an
 invalid combination or when conditional dispatch would reconstruct the former alternatives.
+
+For an output that composes several operations, test the business dependency graph rather than
+implementation timing alone: prove required ordering, prove safe overlap when concurrency is
+material, verify aggregate success/failure mapping, and verify cancellation of owned child work.
+Do not require one event per internal operation when the machine contract has one aggregate outcome.
 
 Tests should assert observable behavior, named invariants, and reproduced regressions. They should
 not require one test per private execution phase, preserve obsolete states/events, or force exact

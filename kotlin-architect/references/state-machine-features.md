@@ -182,7 +182,10 @@ product copy. Rethrow `CancellationException`.
 
 ## Output cardinality and orchestration
 
-Choose cardinality from semantics, not the number of suspending calls:
+Output cardinality and internal execution topology are independent decisions.
+
+Choose cardinality from machine semantics, not from the number of injected functions or suspending
+calls:
 
 - **One event:** use `Output` when one semantic outcome changes the next machine decision.
 - **Event stream:** use `OutputFlow` for genuine zero-to-many observation or production over time.
@@ -195,14 +198,55 @@ new unowned scope, or a detached coroutine. If failure can expose prior-account 
 data, or decide whether the workflow may continue, resolve it authoritatively inside the output or
 emit a semantic event.
 
-An output may orchestrate several injected suspending operations in required order and keep
-intermediate results local when the sequence is non-interleavable. Emit the smallest semantic event
-that changes machine policy. Do not create marker-write, cache-clear, runtime-suspend, or similar
-states/events merely because each operation suspends.
+One `Output` may invoke one or several injected suspending functions when they form one cohesive
+business effect. Its internal execution may be:
+
+- **sequential** when ordering, a data dependency, a transaction boundary, or a business invariant
+  requires one operation to complete before another starts;
+- **concurrent** when the operations are independent and parallel execution serves the accepted
+  behavior, such as reducing latency for unrelated reads or cleanup operations;
+- **mixed** when a small explicit dependency graph requires sequential stages containing one or
+  more concurrent groups.
+
+Use structured concurrency owned by the output Job, normally `coroutineScope` with child `async`
+operations and `await`/`awaitAll`. Every child must complete or be cancelled before the `Output`
+finishes. Do not use `GlobalScope`, create an unowned `CoroutineScope`, or launch detached work to
+hide it from the output lifetime. Use `supervisorScope` only when the accepted failure policy
+requires independent sibling completion and the aggregate result handles those failures explicitly.
+
+Parallelize only semantically independent operations. Keep execution sequential when one result
+feeds another operation, order is observable, the operations share mutable or transactional state,
+or concurrency could violate a privacy, data-integrity, rate-limit, resource, or Android/platform
+invariant. Choose and document aggregate failure behavior: fail fast when one failure invalidates
+the cohesive effect, or collect independent results when the business contract requires a combined
+outcome. Cancellation must propagate through the structured children.
+
+For example, three independent cleanup capabilities may run concurrently and produce one aggregate
+machine event:
+
+```kotlin
+Output {
+    val results = coroutineScope {
+        listOf(
+            async { clearWidgetData() },
+            async { clearTransientExports() },
+            async { clearRouteHandoffs() },
+        ).awaitAll()
+    }
+
+    CleanupDidFinish(summary = summarize(results))
+}
+```
+
+The same internal execution could validly return `null` when every result is fully handled and no
+machine decision depends on it, or use `OutputFlow` when multiple events over time are semantically
+meaningful. Do not emit one event per invoked function merely because functions run separately or
+concurrently. Keep intermediate results local and emit the smallest semantic event cardinality
+required by the machine.
 
 Inject ready-to-use suspending functions or cohesive capability interfaces. An output owns
-orchestration and semantic result mapping; it never discovers concrete providers, SDK clients,
-repositories, scopes, or DI containers.
+orchestration, child-job lifetime, cancellation, failure aggregation, and semantic result mapping;
+it never discovers concrete providers, SDK clients, repositories, scopes, or DI containers.
 
 ## Retry, correlation, cancellation, and observation
 
@@ -275,6 +319,11 @@ When evaluating a collapse, characterize both candidate states across the accept
 Prove semantic output selection, next-state behavior, guards, cancellation/lifetime, invariants, and
 recovery—not only UI projection. Add a negative test when a merged payload could represent an
 invalid combination or when conditional dispatch would reconstruct the former alternatives.
+
+For an output that composes several operations, test the business dependency graph rather than
+implementation timing alone: prove required ordering, prove safe overlap when concurrency is
+material, verify aggregate success/failure mapping, and verify cancellation of owned child jobs.
+Do not require one event per internal operation when the machine contract has one aggregate outcome.
 
 Tests should protect observable behavior, named invariants, and reproduced regressions. They should
 not require one test per private execution phase, preserve obsolete states/events, or force exact

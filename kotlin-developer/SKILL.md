@@ -117,9 +117,19 @@ intentionally:
 - use `OutputFlow` returning `Flow<EventSet>` for genuine zero-to-many observation or production;
 - let `Output` return `null` when a fully contained best-effort effect needs no machine decision.
 
+Internal execution topology is independent of event cardinality. One `Output` may compose one or
+several injected suspending functions sequentially, concurrently through structured concurrency
+(`coroutineScope` plus child `async` work), or as a small combination of sequential stages and
+concurrent groups when the business dependency graph requires it. Parallelize only semantically
+independent operations; preserve ordering for data dependencies, transactions, observable
+sequencing, privacy/data-integrity constraints, rate limits, or other Android/platform invariants.
+The output owns every child Job, cancellation, and aggregate failure/result mapping.
+
 A no-event output remains owned by the state-machine runtime. Never launch an unowned coroutine to
-simulate fire-and-forget. Keep non-interleavable intermediate results local to one output or
-coordinator and emit only the smallest semantic result needed by the machine.
+simulate fire-and-forget. Keep intermediate results local to one output or coordinator when no
+intermediate event changes machine policy, whether the injected functions execute sequentially or
+concurrently. Emit only the smallest semantic result needed by the machine; do not emit one event
+per function merely because several functions are invoked.
 
 When several states share one UI projection, inspect their business meaning and complete route
 behavior before considering a merge. If the same event selects different semantic outputs or next
@@ -158,6 +168,9 @@ clarification as the objective:
   runtime type test, or conditional output/transition dispatch to reconstruct the old alternatives;
 - preserve separate states when their explicit types make business phases, data guarantees, effect
   selection, commit boundaries, or DSL routes clearer;
+- keep one cohesive multi-operation business effect inside one output when intermediate stages do
+  not alter machine policy, selecting sequential, concurrent, or mixed structured execution from
+  actual dependencies rather than creating one state/event per function;
 - move non-interleavable execution phases into local structured control flow;
 - collapse internal result events into the smallest semantic outcome;
 - remove forwarding wrappers and one-implementation interfaces without a consumer-owned boundary;
@@ -183,6 +196,11 @@ When evaluating a state merge, characterize both candidates across the accepted 
 verify semantic output selection, next-state paths, invariants, and recovery—not only their projected
 UI. Include a negative proof when the merged payload could encode an invalid combination or when a
 conditional dispatcher would recreate the former alternatives.
+
+For multi-operation outputs, prove required ordering and safe overlap at the business boundary,
+verify aggregate failure/result mapping, and verify cancellation of all structured child jobs. Do
+not couple tests to one result event per internal function when the machine contract has one
+aggregate outcome.
 
 ### 7. Converge with concrete evidence
 
