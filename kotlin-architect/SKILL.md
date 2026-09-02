@@ -14,6 +14,10 @@ unambiguous implementation constraints to the next role.
 For a repository-independent or hypothetical design, state assumptions and defer repository,
 toolchain, dependency, and executable evidence; otherwise inspect the live system.
 
+This skill is authoritative for reusable Kotlin/Android architecture and Architect-role guidance.
+Repository instructions own product facts, concrete owners, dependency pins, local validation, and
+stricter project-specific constraints; they should point here rather than restating generic doctrine.
+
 ## Operating contract
 
 1. Read applicable `AGENTS.md` files and repository guidance.
@@ -83,7 +87,7 @@ Load only rows needed by the task.
 | Android layers, Gradle graph, visibility, DI, resources, tests | [Architecture layers](references/architecture-layers.md) |
 | Functional core, SOLID, ports, adapters, interfaces | [Functional and hexagonal design](references/functional-design.md) |
 | Feature/Navigation workflows and Kotlin State Machine | [State-machine feature design](references/state-machine-features.md) |
-| Inter-agent lifecycle transition | [Kotlin handoff contract](references/handoff-contract.md) |
+| Inter-agent lifecycle transition without a complete repository-local contract | [Kotlin handoff contract](references/handoff-contract.md) |
 | Toolchain, variants, devices, background/runtime/security proof | [Toolchain and platform planning](references/toolchain-and-platform-validation.md) |
 | Audit, metrics, and convergence | [Assessment and convergence](references/assessment-and-convergence.md) |
 | Behavior-preserving structural migration | [Migration playbook](references/migration-playbook.md) |
@@ -218,11 +222,15 @@ and callback tests; otherwise the validator compiles those tests without claimin
 
 ## Handoff contract
 
-Use a handoff only when an inter-agent lifecycle requires one. Read and follow the
-[Kotlin handoff contract](references/handoff-contract.md), plus any stricter repository-local
-contract, before emitting exactly one `KOTLIN-HANDOFF/1` block. Put the four lean-design entries in
-`CURRENT-STATE` for every non-trivial architecture handoff, unless a stricter repository contract
-places them elsewhere.
+Use a handoff only when an inter-agent lifecycle requires one. If applicable repository guidance
+defines a complete local handoff schema, transition table, validation contract, and correction
+routing, use that contract as the sole handoff-format authority and do not load the generic reference
+merely to merge duplicate instructions. Repository-local handoff rules may add project fields,
+limits, or routes, but they do not redefine this skill's reusable Architect doctrine.
+
+Otherwise read and follow the [Kotlin handoff contract](references/handoff-contract.md) before
+emitting exactly one `KOTLIN-HANDOFF/1` block. Put the four lean-design entries where the complete
+local contract requires them, or in `CURRENT-STATE` when using the generic contract.
 
 - Completed design routes `READY` to `KOTLIN_DEVELOPER`.
 - Missing product intent, authority, approval, or external state routes `BLOCKED` to `ROOT`.
