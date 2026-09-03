@@ -74,6 +74,30 @@ Moving a sum type from concrete states into payload and branching is topology re
 simplification. Prefer the representation that minimizes total semantic and local-reasoning
 complexity while keeping business invariants and routes explicit.
 
+## Product-contract review
+
+When repository guidance defines a product contract, independently verify its maintenance as part of
+readiness:
+
+- identify every existing product rule affected by the change and verify the implementation,
+  acceptance evidence, tests, and technical sidecars preserve its meaning;
+- verify `PRODUCT-CONTRACT-DELTA` is present and equals `NONE` only when no durable product decision
+  was added, changed, or superseded;
+- require a product-contract update in the same focused diff when the user made or accepted a durable
+  decision about observable behavior, data meaning, privacy/security, destructive actions,
+  accessibility, or cross-platform parity;
+- verify stable rule IDs are preserved and shared rules have the same ID and meaning in every
+  in-scope platform repository, or that an unavailable counterpart has an explicit synchronization
+  follow-up;
+- reject product rules that merely fossilize modules, APIs, states/events, checkpoints, retries, DI,
+  call ordering, or exact tests unless the user explicitly made that mechanism contractual;
+- verify architecture, persistence, platform, and validation sidecars refer to rule IDs instead of
+  maintaining conflicting long-form copies.
+
+An accepted durable product decision that exists only in chat, a handoff, code, or tests is at least
+a `medium` finding and blocks readiness. So is a product contract that encodes private
+implementation topology as if it were user-visible policy.
+
 ## Resource routing
 
 Load only rows needed for the review.
@@ -109,21 +133,23 @@ The Reviewer owns findings and verdict. Specialist skills provide depth and tool
 
 ### 1. Confirm scope and intent
 
-Validate the requested outcome, accepted and deliberately unmodeled paths, owners, preserved
-behavior, destinations, risk, and validation claims. Read source tests when behavior or API changed.
+Validate the requested outcome, applicable product rule IDs, `PRODUCT-CONTRACT-DELTA`, accepted and
+deliberately unmodeled paths, owners, preserved behavior, destinations, risk, and validation claims.
+Read source tests when behavior or API changed. Reconstruct any durable product decision made during
+the session and ensure it has an authoritative contract home.
 
 ### 2. Check hard gates first
 
 Check compile/test state, forbidden edges, data loss, race risk, cancellation/lifetime issues, API
-availability, unlocalized user-facing changes, accessibility regressions, and required migration or
-recovery. A hard-gate failure blocks readiness.
+availability, unlocalized user-facing changes, accessibility regressions, required migration or
+recovery, and required product-contract maintenance. A hard-gate failure blocks readiness.
 
 ### 3. Trace architecture and behavior
 
 Compare the live target/import graph, ownership, access control, feature/navigator separation,
 seams, composition, machine topology, and test ownership against the contract. Validate user intent
-through UI, events, effects, adapters, outputs, and navigation under required success and failure
-conditions.
+and applicable product rules through UI, events, effects, adapters, outputs, and navigation under
+required success and failure conditions.
 
 ### 4. Perform the necessity pass
 
@@ -183,33 +209,38 @@ improve remediation clarity.
 ### 5. Validate high-risk claims
 
 Run proportionate checks first for changed targets/tests, then owner-level architecture gates,
-integration, and runtime-sensitive flows. Record exact commands, directories, outputs, and blockers.
+integration, runtime-sensitive flows, and affected product rules. Record exact commands,
+directories, outputs, blockers, and rule IDs proved.
 
 ### 6. Report and converge
 
-Report findings, residual risk, blocked checks, required follow-up, and the necessity assessment.
-Never score if not asked. When numeric scoring is requested, apply `PROPORTIONALITY` from the quality
-model; the score is diagnostic unless the user or repository explicitly makes a threshold binding.
+Report findings, residual risk, blocked checks, required follow-up, the necessity assessment, and the
+product-contract result. Never score if not asked. When numeric scoring is requested, apply
+`PROPORTIONALITY` from the quality model; the score is diagnostic unless the user or repository
+explicitly makes a threshold binding.
 
 ## Finding contract
 
 - `blocker`: unsafe to merge due to behavior, build, data integrity, or privacy failure.
 - `high`: correctness, lifecycle, architecture, recovery, accessibility, or major test defect.
-- `medium`: concrete maintainability, unjustified mechanism cost, hidden topology, or non-trivial
-  quality gap.
+- `medium`: concrete maintainability, unjustified mechanism cost, hidden topology, undocumented or
+  incorrect durable product policy, or another non-trivial quality gap.
 - `low`: bounded cleanup issue.
 
 Each finding includes severity, exact location/evidence, violated contract, impact, required proof,
-and minimal remediation. Material unearned complexity is never reduced to a subjective style note.
-Do not file `state-explosion` merely because several concrete states share a projection; establish
-full behavioral equivalence first. Treat hidden discriminators and topology relocation as concrete
-design defects when they make routes or invariants harder to understand.
+and minimal remediation. Material unearned complexity and missing product-contract maintenance are
+never reduced to subjective style notes. Do not file `state-explosion` merely because several
+concrete states share a projection; establish full behavioral equivalence first. Treat hidden
+discriminators and topology relocation as concrete design defects when they make routes or
+invariants harder to understand.
 
 ## Review handoff
 
 Before closing, provide:
 
-- validation performed;
+- validation performed and product rule IDs proved;
+- `PRODUCT-CONTRACT-DELTA`: `NONE` or the verified rules added, changed, or superseded;
+- product-contract synchronization follow-up or `NONE`;
 - confirmed findings ordered by severity;
 - blocked/not-run checks;
 - residual risk;
@@ -217,9 +248,9 @@ Before closing, provide:
 - necessity result, including unjustified mechanisms, justified projection-equivalent states,
   topology relocation, or `NONE`.
 
-If required evidence is missing, do not mark ready. Route producible implementation evidence to
-`SWIFT_DEVELOPER` as `CHANGES_REQUIRED`; route missing user authority or external state to `ROOT` as
-`BLOCKED`.
+If required evidence or product-contract maintenance is missing, do not mark ready. Route producible
+implementation evidence or contract corrections to `SWIFT_DEVELOPER` as `CHANGES_REQUIRED`; route
+missing user authority or external state to `ROOT` as `BLOCKED`.
 
 ## Handoff contract
 
@@ -230,11 +261,13 @@ merely to merge duplicate instructions. Repository-local handoff rules may add p
 limits, scoring, or routes, but they do not redefine this skill's reusable Reviewer doctrine.
 
 Otherwise read and follow the [Swift handoff contract](references/handoff-contract.md) before
-emitting exactly one `SWIFT-HANDOFF/1` block.
+emitting exactly one `SWIFT-HANDOFF/1` block. Put `PRODUCT-CONTRACT-DELTA` where the complete local
+contract requires it, or in `CURRENT-STATE` when using the generic contract.
 
 - A ready implementation routes `APPROVED` to `COMPLETE` only when applicable hard gates pass and no
   `blocker`, `high`, or `medium` finding remains.
-- Implementation or test findings route `CHANGES_REQUIRED` to `SWIFT_DEVELOPER`.
+- Implementation, test, or product-contract maintenance findings route `CHANGES_REQUIRED` to
+  `SWIFT_DEVELOPER`.
 - Architecture findings route `CHANGES_REQUIRED` to `SWIFT_ARCHITECT`.
 - Missing user authority or external state routes `BLOCKED` to `ROOT`.
 - For a standalone review or repository-classified `TRIVIAL` root self-review, return the normal

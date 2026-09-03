@@ -12,15 +12,39 @@ Use the following ownership model:
 | Guidance | Source of truth |
 | --- | --- |
 | Reusable Swift/Kotlin architecture, functional design, mechanism admission, state-machine semantics, concurrency, UI, testing, evidence, proportionality, and review method | The applicable skill and its routed references in this repository. |
-| Product behavior, supported app versions, repository graph, concrete owners, current dependency pins, local naming/layout, local validation commands, and stricter project constraints | The affected project's `AGENTS.md` and routed sidecars. |
+| Durable product behavior, data meaning, privacy/destructive-action policy, and cross-platform product decisions | The affected project's product contract when it defines one. |
+| Supported app versions, repository graph, concrete owners, current dependency pins, local naming/layout, local validation commands, and stricter project constraints | The affected project's `AGENTS.md` and routed technical sidecars. |
 | Current implementation facts and executable behavior | The live manifests/build files, compiled APIs, source, tests, and executable guardrails. |
 | Agent identity, sandbox, and MCP capability | The thin TOML profile in `MobileDevCycleAgents`. |
 | Complexity class, model/reasoning selection, role order, liveness, local handoff schema, and correction routing | The affected project's lifecycle guidance. |
 
 Repository guidance may preserve or strengthen a project-specific invariant, but it should not copy a
-complete reusable rule from a skill. When a local document restates generic doctrine and the two
-drift, preserve the local product invariant, apply the skill as the reusable authority, and update
-or remove the duplicate project wording.
+complete reusable rule from a skill. Technical sidecars should refer to stable product-rule IDs
+instead of maintaining a second long-form definition. When sources drift, preserve explicit accepted
+product intent, apply the role skill as reusable engineering authority, and update the duplicate or
+obsolete guidance.
+
+## Product-contract maintenance
+
+When a repository defines a product contract, lifecycle roles treat it as the durable product-
+decision authority:
+
+- the Specifier reads relevant rules, references existing IDs, and identifies a contract delta when
+  the ready specification introduces or changes durable product behavior;
+- the Architect separates the product rule from the proposed mechanism and carries the required rule
+  delta into the implementation handoff;
+- the Developer updates the product contract in the same focused change as the implementation and
+  reports affected rule IDs or `NONE`;
+- the Reviewer blocks readiness when an accepted durable product decision exists only in chat, a
+  handoff, code, or tests, or when implementation mechanics are incorrectly promoted into product
+  policy.
+
+A product-contract entry records observable behavior, durable data meaning, privacy/security or
+destructive-action policy, cross-platform parity, or another decision intended to survive a rewrite.
+It does not normally record modules, classes, APIs, state/event topology, checkpoints, retries, DI,
+call sequences, or test commands. Shared rules use stable IDs across all in-scope platform
+repositories; update each copy in the same change or record an explicit synchronization follow-up
+when a counterpart is unavailable.
 
 ## Skills
 
@@ -62,8 +86,8 @@ with a shared overlay whose unconditional loading would increase context for unr
 
 - Put a reusable rule in the applicable skill or focused reference, not in a project sidecar or TOML
   profile.
-- Put a product/repository decision in the project that owns it, and describe only the delta from the
-  reusable skill.
+- Put a durable product decision in the project's product contract when one exists; put repository
+  ownership, platform constraints, and validation details in their technical sidecars.
 - Prefer one full definition plus a short pointer elsewhere. Do not maintain parallel long-form
   formulations of the same rule.
 - Keep role skills self-contained enough to run independently; do not add an always-on overlay skill
