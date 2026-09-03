@@ -77,6 +77,24 @@ architecture. They must not freeze private topology or force extra production co
 make an implementation decomposition exhaustively testable. They also must not force meaningful
 business-state distinctions to disappear merely because those states render identically.
 
+## Product-contract stewardship
+
+When repository guidance defines a product contract, treat it as the authority for durable product
+behavior and stable rule IDs. Separate the product decision from its technical realization:
+
+- reference existing product rule IDs in the design and `BINDING` items rather than copying their
+  complete text;
+- when accepted scope introduces, changes, or supersedes durable behavior, define a concise
+  `PRODUCT-CONTRACT-DELTA` by outcome and require the Developer to update the contract in the same
+  focused change;
+- do not promote modules, APIs, state/event topology, checkpoints, retries, DI, call ordering, or
+  test shapes into product policy unless the user explicitly makes that mechanism contractual;
+- for a shared rule across in-scope platform repositories, preserve the same stable ID and meaning;
+  when a counterpart is unavailable, record the exact synchronization follow-up.
+
+A design is incomplete when it silently changes a durable product decision without identifying the
+contract delta or required user authority.
+
 ## Resource routing
 
 Load only rows needed by the task.
@@ -117,10 +135,11 @@ mandatory local constraints or authorize production edits.
 
 ### 1. Establish product scope and the complexity envelope
 
-Record accepted behavior, deliberately unmodeled adverse paths, language/toolchain compatibility,
-dependency pins, target/process surfaces, owners, and required validation. Read relevant tests
-before architecture decisions. Do not convert every conceivable network, cancellation, stale-result,
-process-death, rollback, or retry path into a design requirement.
+Record accepted behavior, applicable product rule IDs, the product-contract delta or `NONE`,
+deliberately unmodeled adverse paths, language/toolchain compatibility, dependency pins, target/
+process surfaces, owners, and required validation. Read relevant tests before architecture
+decisions. Do not convert every conceivable network, cancellation, stale-result, process-death,
+rollback, or retry path into a design requirement.
 
 Describe the lean baseline before adding resilience or abstraction. Treat this baseline as the
 comparison point for every subsequent mechanism.
@@ -130,7 +149,7 @@ comparison point for every subsequent mechanism.
 Follow real composition, navigation, feature roots, state machines, capabilities,
 persistence/network boundaries, and result delivery. For asynchronous flows, include ownership,
 lifetime, cancellation, retry, stale-result handling, recovery, and repeat delivery only where the
-accepted behavior, platform contract, or named invariants make them material.
+accepted behavior, platform contract, product rule, or named invariant makes them material.
 
 ### 3. Define graph and ownership
 
@@ -172,7 +191,7 @@ before binding topology.
 
 Define:
 
-- owner-local and integration tests for accepted behavior and named invariants;
+- owner-local and integration tests for accepted behavior, product rule IDs, and named invariants;
 - negative guardrails for forbidden imports, dependencies, exposure, and unsafe ownership;
 - migration/recovery boundaries that are actually required;
 - accessibility/localization impact;
@@ -187,6 +206,7 @@ types.
 
 Architectural handoff must include:
 
+- applicable product rule IDs and `PRODUCT-CONTRACT-DELTA: NONE | <required rule changes>`;
 - allowed and forbidden direction;
 - owners and ownership edges;
 - public seam changes and rationale;
@@ -198,9 +218,9 @@ Architectural handoff must include:
 - `REQUIRED-ADVERSE-PATHS`: adverse paths implementation must handle;
 - `DELIBERATELY-UNMODELED`: plausible paths intentionally outside the contract.
 
-Bind behavior, invariants, ownership, and direction by default. Bind a concrete mechanism or exact
-private topology only when that mechanism itself is necessary. Do not hand off unresolved ownership
-ambiguities or hidden behavior changes.
+Bind behavior, product rules, invariants, ownership, and direction by default. Bind a concrete
+mechanism or exact private topology only when that mechanism itself is necessary. Do not hand off
+unresolved ownership ambiguities, undocumented product changes, or hidden behavior changes.
 
 ## Handoff contract
 
@@ -211,8 +231,9 @@ merely to merge duplicate instructions. Repository-local handoff rules may add p
 limits, or routes, but they do not redefine this skill's reusable Architect doctrine.
 
 Otherwise read and follow the [Swift handoff contract](references/handoff-contract.md) before
-emitting exactly one `SWIFT-HANDOFF/1` block. Put the four lean-design entries where the complete
-local contract requires them, or in `CURRENT-STATE` when using the generic contract.
+emitting exactly one `SWIFT-HANDOFF/1` block. Put the four lean-design entries and product-contract
+delta where the complete local contract requires them, or in `CURRENT-STATE` when using the generic
+contract.
 
 - Completed design routes `READY` to `SWIFT_DEVELOPER`.
 - Missing product intent, authority, approval, or external state routes `BLOCKED` to `ROOT`.

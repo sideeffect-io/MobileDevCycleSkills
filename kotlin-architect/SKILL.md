@@ -78,6 +78,24 @@ and forbidden edges. They must not freeze private topology or force extra produc
 solely to make an implementation decomposition exhaustively testable. They also must not force
 meaningful business-state distinctions to disappear merely because those states render identically.
 
+## Product-contract stewardship
+
+When repository guidance defines a product contract, treat it as the authority for durable product
+behavior and stable rule IDs. Separate the product decision from its technical realization:
+
+- reference existing product rule IDs in the design and `BINDING` items rather than copying their
+  complete text;
+- when accepted scope introduces, changes, or supersedes durable behavior, define a concise
+  `PRODUCT-CONTRACT-DELTA` by outcome and require the Developer to update the contract in the same
+  focused change;
+- do not promote modules, APIs, state/event topology, checkpoints, retries, DI, call ordering, or
+  test shapes into product policy unless the user explicitly makes that mechanism contractual;
+- for a shared rule across in-scope platform repositories, preserve the same stable ID and meaning;
+  when a counterpart is unavailable, record the exact synchronization follow-up.
+
+A design is incomplete when it silently changes a durable product decision without identifying the
+contract delta or required user authority.
+
 ## Resource routing
 
 Load only rows needed by the task.
@@ -111,9 +129,10 @@ replace mandatory local constraints or authorize production edits.
 
 ### 1. Establish product scope and the complexity envelope
 
-Record accepted behavior, deliberately unmodeled adverse paths, Kotlin/AGP/Gradle/JDK/JVM/Compose/
-AndroidX/SDK/variant compatibility, dependency pins, process surfaces, owners, form factors,
-locales, and required validation. Read relevant tests before architecture decisions.
+Record accepted behavior, applicable product rule IDs, the product-contract delta or `NONE`,
+deliberately unmodeled adverse paths, Kotlin/AGP/Gradle/JDK/JVM/Compose/AndroidX/SDK/variant
+compatibility, dependency pins, process surfaces, owners, form factors, locales, and required
+validation. Read relevant tests before architecture decisions.
 
 Describe the lean baseline before adding resilience or abstraction. Do not convert every
 conceivable network, cancellation, stale-result, process-recreation, rollback, or retry path into a
@@ -126,7 +145,7 @@ Compose or View presentation, state holders, state machines, optional domain use
 Datasources/repositories, generic Frameworks, platform/vendor boundaries, persistence, and result
 delivery. Include lifetime, cancellation, retry, buffering, correlation, stale-result rejection,
 configuration change, process recreation, recovery, and repeat delivery only where accepted
-behavior, a platform contract, or named invariants make them material.
+behavior, a platform contract, a product rule, or named invariants make them material.
 
 ### 3. Define graph and ownership
 
@@ -186,12 +205,12 @@ and compile proposed API usage against the resolved dependency revision.
 
 ### 6. Make the contract executable
 
-Define owner-local tests and structural guardrails with the design. Cover direct dependency/use
-parity, forbidden edges, minimal visibility, source-set/test ownership, changed-module builds,
-coroutine/lifecycle behavior, affected locales/accessibility, app/background destinations,
-migration/recovery that is actually required, release/R8, and security/privacy risk. Assembly is
-not runtime or device proof. Guardrails should reject forbidden architecture rather than require an
-exact private type inventory.
+Define owner-local tests and structural guardrails with the design. Cover product rule IDs, direct
+dependency/use parity, forbidden edges, minimal visibility, source-set/test ownership, changed-
+module builds, coroutine/lifecycle behavior, affected locales/accessibility, app/background
+destinations, migration/recovery that is actually required, release/R8, and security/privacy risk.
+Assembly is not runtime or device proof. Guardrails should reject forbidden architecture rather than
+require an exact private type inventory.
 
 When evaluating a state collapse, require evidence over the accepted event alphabet, semantic output
 selection, next-state behavior, invariants, and recovery—not merely equal UI projections or fewer
@@ -201,6 +220,7 @@ types.
 
 Architectural handoff must include:
 
+- applicable product rule IDs and `PRODUCT-CONTRACT-DELTA: NONE | <required rule changes>`;
 - allowed and forbidden direction;
 - owners, lifetimes, and source-of-truth edges;
 - public seam or dependency changes and rationale;
@@ -212,9 +232,10 @@ Architectural handoff must include:
 - `REQUIRED-ADVERSE-PATHS`: adverse paths implementation must handle;
 - `DELIBERATELY-UNMODELED`: plausible paths intentionally outside the contract.
 
-Bind behavior, invariants, ownership, and direction by default. Bind a concrete mechanism or exact
-private topology only when that mechanism itself is necessary. Do not hand off unresolved ownership
-ambiguity, a reverse edge, or a hidden behavior change.
+Bind behavior, product rules, invariants, ownership, and direction by default. Bind a concrete
+mechanism or exact private topology only when that mechanism itself is necessary. Do not hand off
+unresolved ownership ambiguity, a reverse edge, an undocumented product change, or a hidden behavior
+change.
 
 Run `scripts/validate_examples.sh` after changing the compiled example or a Kotlin State Machine
 snippet. Set `RUN_ANDROID_TESTS=1` with a connected emulator or device to execute Compose semantics
@@ -229,8 +250,9 @@ merely to merge duplicate instructions. Repository-local handoff rules may add p
 limits, or routes, but they do not redefine this skill's reusable Architect doctrine.
 
 Otherwise read and follow the [Kotlin handoff contract](references/handoff-contract.md) before
-emitting exactly one `KOTLIN-HANDOFF/1` block. Put the four lean-design entries where the complete
-local contract requires them, or in `CURRENT-STATE` when using the generic contract.
+emitting exactly one `KOTLIN-HANDOFF/1` block. Put the four lean-design entries and product-contract
+delta where the complete local contract requires them, or in `CURRENT-STATE` when using the generic
+contract.
 
 - Completed design routes `READY` to `KOTLIN_DEVELOPER`.
 - Missing product intent, authority, approval, or external state routes `BLOCKED` to `ROOT`.

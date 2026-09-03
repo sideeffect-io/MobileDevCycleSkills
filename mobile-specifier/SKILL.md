@@ -15,6 +15,13 @@ adverse-path admission, and question-loop guidance. Repository instructions own 
 current behavior, local policy, routing, and stricter project-specific constraints; they should
 point here rather than restating this generic contract.
 
+When a repository defines a product contract, treat it as the durable product-decision authority.
+Load only the relevant sections, reference existing stable rule IDs in `BINDING`, and distinguish a
+new product decision from an implementation choice. If a ready specification introduces, changes, or
+supersedes a durable product rule, identify a concise `PRODUCT-CONTRACT-DELTA` item in `CONTEXT` or
+`BINDING` for the downstream lifecycle. The Specifier remains read-only and does not edit the
+contract itself.
+
 ## Scope
 
 Use this skill only when a repository router explicitly invokes `$mobile-specifier` for a request
@@ -36,8 +43,8 @@ After identifying the affected platform from the repository and request:
   equivalent product outcomes through platform-native behavior.
 
 Do not inspect a sibling repository merely because it exists. Inspect a counterpart only when the
-request, applicable repository guidance, or an established parity contract identifies it and the
-counterpart is locally accessible.
+request, applicable repository guidance, an established parity contract, or a shared product rule
+identifies it and the counterpart is locally accessible.
 
 ## Repository grounding
 
@@ -45,7 +52,8 @@ Before deciding readiness or asking the user anything:
 
 1. Read the complete request and relevant conversation, including earlier answers and the latest
    `MOBILE-SPEC/1` block when one exists.
-2. Read every applicable `AGENTS.md` and only the sidecars they route for the affected surface.
+2. Read every applicable `AGENTS.md`, the relevant product-contract sections when one exists, and
+   only the technical sidecars routed for the affected surface.
 3. Inspect the current branch, worktree status, and relevant diff. Treat existing changes as
    user-owned and preserve them.
 4. Identify the native platform and supported versions from manifests, package/build files, and
@@ -59,9 +67,11 @@ Use read-only repository inspection. Do not start implementation or run broad bu
 formatters, generators, or other mutating commands during specification.
 
 Treat manifests, build configuration, production source, and tests as current implementation
-truth. Repository guidance supplies binding local policy. When prose conflicts with executable
-sources, report the conflict if it changes product intent; do not silently choose one. An explicit
-user request to change existing behavior overrides the current behavior within its stated scope.
+truth. A repository product contract supplies durable product intent; technical guidance supplies
+binding local policy. When prose conflicts with executable sources, report the conflict if it
+changes product intent; do not silently choose one. An explicit user request to change existing
+behavior overrides the current behavior within its stated scope and creates a product-contract delta
+when the new decision is intended to survive the implementation.
 
 ## Readiness decision
 
@@ -83,9 +93,9 @@ Assess only categories applicable to the requested change:
   affected; and
 - observable acceptance conditions that distinguish success from an incomplete implementation.
 
-Existing repository behavior and policy may satisfy a category. Do not demand that every prompt
-spell out every mobile edge case. Record a low-risk, reversible, strongly evidenced default under
-`ASSUMPTIONS` instead of blocking readiness.
+Existing product-contract rules, repository behavior, and local policy may satisfy a category. Do
+not demand that every prompt spell out every mobile edge case. Record a low-risk, reversible,
+strongly evidenced default under `ASSUMPTIONS` instead of blocking readiness.
 
 Mark the request `SPEC_NOT_READY` when at least one material gap remains, including:
 
@@ -93,8 +103,8 @@ Mark the request `SPEC_NOT_READY` when at least one material gap remains, includ
 - ambiguity about what is in scope, which platform or user journey changes, or what success means;
 - missing permission-denial, background/recovery, persistence/sync, destructive-action, privacy,
   or external-entry behavior when the requested capability depends on it;
-- a conflict between the requested behavior and a binding repository/product rule that the user
-  must intentionally resolve; or
+- a conflict between the requested behavior and a binding product rule or repository policy that the
+  user must intentionally resolve; or
 - a required external input such as product copy, design asset, data contract, entitlement, or
   reference implementation that cannot be recovered from the repository.
 
@@ -111,8 +121,8 @@ An adverse path belongs in `ACCEPTANCE` or `BINDING` only when at least one of t
 
 - the user explicitly requests the behavior;
 - the path is user-visible and materially affects the requested outcome;
-- an existing named security, privacy, data-integrity, accessibility, lifecycle, or platform
-  invariant requires it;
+- an existing named product, security, privacy, data-integrity, accessibility, lifecycle, or
+  platform invariant requires it;
 - a concrete platform/API contract makes the decision unavoidable;
 - a reproduced defect or established product behavior must be preserved or changed.
 
@@ -125,7 +135,23 @@ them prevents downstream over-implementation.
 Ask the user only when different answers would materially change observable behavior, safety,
 privacy, irreversible data handling, or a required platform contract. A technical mechanism—such
 as a state machine, checkpoint, correlation ID, retry layer, or rollback protocol—is never a
-specifier question unless the user is explicitly defining a technical library contract.
+specifier question unless the user is explicitly defining a technical library contract. Do not add
+such a mechanism to a product contract merely because it appears in the current implementation.
+
+## Product-contract delta
+
+A product-contract delta exists when the ready specification makes a durable decision about
+observable behavior, data meaning, privacy/security, a destructive action, cross-platform parity, or
+another policy that should survive a rewrite and is not already represented accurately.
+
+- Reference existing rule IDs rather than copying their complete text into the specification.
+- Describe a new or changed rule by outcome, not by module, API, class, state/event topology,
+  checkpoint, retry, DI, call ordering, or test shape.
+- For a shared rule and an explicitly in-scope counterpart repository, require the same stable ID and
+  meaning on both platforms. If the counterpart is unavailable or out of scope, record the exact
+  synchronization follow-up rather than silently declaring parity.
+- Use `PRODUCT-CONTRACT-DELTA: NONE` when the request only implements or refactors existing accepted
+  rules.
 
 ## Question loop
 
@@ -168,11 +194,12 @@ ACCEPTANCE:
 
 CONTEXT:
 - <relevant current repository behavior and evidence>
+- PRODUCT-CONTRACT-DELTA: NONE | <stable rule IDs to add, change, or supersede and their outcome>
 
 BINDING:
 - NONE
 or:
-- <product decision or repository constraint to preserve>
+- <product rule ID, product decision, or repository constraint to preserve>
 
 ASSUMPTIONS:
 - NONE
@@ -202,7 +229,8 @@ NEXT: REFINE_SPEC | CLASSIFY_COMPLEXITY
 For `SPEC_READY`, `BLOCKERS` and `QUESTIONS` must both be `NONE`, and `NEXT` must be
 `CLASSIFY_COMPLEXITY`. Keep `OBJECTIVE`, `ACCEPTANCE`, and `BINDING` precise enough to seed the
 downstream Swift or Kotlin lifecycle handoff. Use `OUT-OF-SCOPE` to prevent a plausible but
-unrequired edge path from silently becoming implementation scope.
+unrequired edge path from silently becoming implementation scope. Always include one
+`PRODUCT-CONTRACT-DELTA` entry in `CONTEXT`, using `NONE` when no durable rule changes.
 
 For `SPEC_NOT_READY`, `BLOCKERS` must name at least one material gap and `NEXT` must be
 `REFINE_SPEC`. Include the actionable user questions in `QUESTIONS`; use `NONE` only when the sole

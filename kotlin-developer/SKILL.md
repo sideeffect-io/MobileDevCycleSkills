@@ -61,6 +61,28 @@ They must not require extra production topology solely so each private execution
 asserted independently. They also must not pressure the implementation to delete meaningful
 business states merely because several states share one UI projection.
 
+## Product-contract maintenance
+
+When repository guidance defines a product contract, update it in the same focused change whenever
+accepted scope introduces, changes, or supersedes a durable product decision. Do not leave the
+decision only in chat, the handoff, code, or tests.
+
+- Reference and preserve existing stable rule IDs.
+- Write the outcome, durable data meaning, privacy/security or destructive-action policy, or parity
+  decision that must survive a rewrite; do not document modules, APIs, states/events, checkpoints,
+  retries, DI, call ordering, or exact tests unless the mechanism itself was explicitly accepted as
+  product policy.
+- For shared rules and in-scope platform repositories, update every copy with the same ID and
+  meaning. When a counterpart is unavailable or out of scope, record the precise synchronization
+  follow-up instead of silently diverging.
+- Update technical sidecars only for affected ownership, platform, or validation deltas and refer to
+  the product rule ID rather than copying its full text.
+- Report `PRODUCT-CONTRACT-DELTA: NONE | <rule IDs added, changed, or superseded>` in the verification
+  result or lifecycle handoff.
+
+If the requested implementation would require a product decision that has not been accepted, stop
+and escalate rather than inventing or documenting it as policy.
+
 ## Resource routing
 
 Load only rows required by the task.
@@ -84,14 +106,15 @@ Use `assets/ProductionExample` as a compiled example only.
 
 ### 1. Make the contract executable
 
-Restate observable behavior, admitted adverse paths, deliberately unmodeled paths, finite failures,
-effects, cancellation/lifetime, process recovery, accessibility/localization, performance risk, and
-acceptance tests. Read tests before editing; add characterization tests when preserved behavior is
-unclear.
+Restate observable behavior, applicable product rule IDs, the product-contract delta or `NONE`,
+admitted adverse paths, deliberately unmodeled paths, finite failures, effects, cancellation/
+lifetime, process recovery, accessibility/localization, performance risk, and acceptance tests.
+Read tests before editing; add characterization tests when preserved behavior is unclear.
 
 Before editing, run a focused architecture-contradiction check covering ownership, Gradle direction,
-public APIs, source of truth, workflow seams, and the admitted-complexity ledger. Return
-contradictions to the Architect rather than inventing new architecture.
+public APIs, source of truth, workflow seams, the admitted-complexity ledger, and any product-
+contract delta. Return contradictions to the Architect rather than inventing new architecture or
+product policy.
 
 ### 2. Build behavior before presentation
 
@@ -181,20 +204,22 @@ clarification as the objective:
 - remove duplicate validation, retry, correlation, or recovery policy already guaranteed by an
   authoritative owner;
 - remove speculative configuration, extension points, and implementation-shaped tests;
-- keep named safety, privacy, data-integrity, accessibility, lifecycle, and Android invariants.
+- keep named product, safety, privacy, data-integrity, accessibility, lifecycle, and Android
+  invariants.
 
 Optimize total semantic and local-reasoning complexity, not type count. Escalate when simplification
-would contradict a binding architecture decision. Do not preserve an unearned mechanism merely
-because tests or validators already encode its private topology; update them to protect behavior,
-invariants, and forbidden boundaries.
+would contradict a binding architecture or product decision. Do not preserve an unearned mechanism
+merely because tests or validators already encode its private topology; update them to protect
+behavior, invariants, and forbidden boundaries.
 
 ### 6. Verify at owner scope
 
-Test pure policy without Android scaffolding. Test legal and forbidden journeys, effect mapping,
-finite failures, cancellation, stale results, recovery, Flow collection, process/lifecycle behavior,
-identity, callbacks, and composition only where applicable. Share one coroutine test scheduler and
-use virtual time or explicit gates rather than sleeps. Use Robolectric or instrumentation only when
-the Android behavior they simulate or execute is part of the proof.
+Test product rules and pure policy without Android scaffolding where possible. Test legal and
+forbidden journeys, effect mapping, finite failures, cancellation, stale results, recovery, Flow
+collection, process/lifecycle behavior, identity, callbacks, and composition only where applicable.
+Share one coroutine test scheduler and use virtual time or explicit gates rather than sleeps. Use
+Robolectric or instrumentation only when the Android behavior they simulate or execute is part of
+the proof.
 
 When evaluating a state merge, characterize both candidates across the accepted event alphabet and
 verify semantic output selection, next-state paths, invariants, and recovery—not only their projected
@@ -214,8 +239,9 @@ resource gates, app integration, emulator/device flows, release/R8, and profilin
 required, blocked, skipped, and not-run checks explicitly.
 
 Reconstruct the complete scoped diff and affected consumers, inspect referenced artifacts, rerun
-checks after remediations, and rerun the applicable final set before handoff. A path or successful
-assembly alone is not behavior proof.
+checks after remediations, and rerun the applicable final set before handoff. Confirm that every
+accepted product-contract delta is present and every technical sidecar reference resolves. A path or
+successful assembly alone is not behavior proof.
 
 Run `scripts/validate_examples.sh` after changing the compiled example. Set
 `RUN_ANDROID_TESTS=1` with a connected emulator or device to execute Compose semantics and callback
@@ -225,7 +251,8 @@ tests; otherwise the validator compiles those tests without claiming a device re
 
 Return:
 
-- implemented requirements and changed behavior by owner;
+- implemented requirements by owner and applicable product rule IDs;
+- `PRODUCT-CONTRACT-DELTA`: `NONE` or rule IDs added, changed, or superseded;
 - changed files and dependency/API changes;
 - exact commands, Gradle tasks, variants/devices, and outcomes;
 - inspected artifacts and final full-diff audit result;
@@ -246,8 +273,9 @@ merely to merge duplicate instructions. Repository-local handoff rules may add p
 limits, or routes, but they do not redefine this skill's reusable Developer doctrine.
 
 Otherwise read and follow the [Kotlin handoff contract](references/handoff-contract.md) before
-emitting exactly one `KOTLIN-HANDOFF/1` block. Put the three implementation complexity entries where
-the complete local contract requires them, or in `CURRENT-STATE` when using the generic contract.
+emitting exactly one `KOTLIN-HANDOFF/1` block. Put the implementation complexity entries and
+`PRODUCT-CONTRACT-DELTA` where the complete local contract requires them, or in `CURRENT-STATE` when
+using the generic contract.
 
 - Completed implementation routes `READY` to `KOTLIN_REVIEWER`.
 - An architecture contradiction routes `CHANGES_REQUIRED` to `KOTLIN_ARCHITECT`.

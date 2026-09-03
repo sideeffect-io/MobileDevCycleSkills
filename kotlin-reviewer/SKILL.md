@@ -21,7 +21,7 @@ restating generic doctrine.
 
 1. Read applicable `AGENTS.md`, repository guidance, request, and the one current lifecycle handoff
    when one exists.
-2. Inspect the branch, dirty worktree, complete scoped diff, owners, Gradle graph, source sets,
+2. Inspect branch, dirty worktree, complete scoped diff, owners, Gradle graph, source sets,
    visibility, DI, tests, consumers, resources, manifests, and guardrails. Separate unrelated edits
    and failures.
 3. Reconstruct critical execution paths; do not review only changed lines in isolation.
@@ -75,6 +75,30 @@ Moving a sealed alternative from concrete states into payload and branching is t
 not simplification. Prefer the representation that minimizes total semantic and local-reasoning
 complexity while keeping business invariants and routes explicit.
 
+## Product-contract review
+
+When repository guidance defines a product contract, independently verify its maintenance as part of
+readiness:
+
+- identify every existing product rule affected by the change and verify the implementation,
+  acceptance evidence, tests, and technical sidecars preserve its meaning;
+- verify `PRODUCT-CONTRACT-DELTA` is present and equals `NONE` only when no durable product decision
+  was added, changed, or superseded;
+- require a product-contract update in the same focused diff when the user made or accepted a durable
+  decision about observable behavior, data meaning, privacy/security, destructive actions,
+  accessibility, or cross-platform parity;
+- verify stable rule IDs are preserved and shared rules have the same ID and meaning in every
+  in-scope platform repository, or that an unavailable counterpart has an explicit synchronization
+  follow-up;
+- reject product rules that merely fossilize modules, APIs, states/events, checkpoints, retries, DI,
+  call ordering, or exact tests unless the user explicitly made that mechanism contractual;
+- verify architecture, persistence, platform, and validation sidecars refer to rule IDs instead of
+  maintaining conflicting long-form copies.
+
+An accepted durable product decision that exists only in chat, a handoff, code, or tests is at least
+a `medium` finding and blocks readiness. So is a product contract that encodes private
+implementation topology as if it were user-visible policy.
+
 ## Resource routing
 
 Load only rows needed for the review.
@@ -103,24 +127,26 @@ The Reviewer owns findings and verdict. Specialist skills provide depth and tool
 
 ### 1. Confirm scope and intent
 
-Validate the requested outcome, accepted and deliberately unmodeled paths, modules/source sets and
-owners, preserved behavior, variants/devices, risk, and validation claims. Read source tests and
-call sites when behavior or API changed.
+Validate the requested outcome, applicable product rule IDs, `PRODUCT-CONTRACT-DELTA`, accepted and
+deliberately unmodeled paths, modules/source sets and owners, preserved behavior, variants/devices,
+risk, and validation claims. Read source tests and call sites when behavior or API changed.
+Reconstruct any durable product decision made during the session and ensure it has an authoritative
+contract home.
 
 ### 2. Check hard gates first
 
 Check compile/test state, forbidden edges, data loss, privacy exposure, coroutine races,
 cancellation/lifetime defects, unavailable APIs, unlocalized user-facing changes, accessibility
-regressions, exported-component risk, and required migration/recovery. A hard-gate failure blocks
-readiness.
+regressions, exported-component risk, required migration/recovery, and required product-contract
+maintenance. A hard-gate failure blocks readiness.
 
 ### 3. Trace architecture and behavior
 
 Compare the live Gradle graph, visibility, source-of-truth ownership, Feature/Navigation separation,
 platform/vendor edges, DI composition, machine topology, and test ownership against the contract.
-Trace user intent through Route/Screen or View, state holder/workflow, capability/use case,
-repository, data source, result event, UI state, navigation/message acknowledgement, and persistence
-under required success and failure conditions.
+Trace user intent and applicable product rules through Route/Screen or View, state holder/workflow,
+capability/use case, repository, data source, result event, UI state, navigation/message
+acknowledgement, and persistence under required success and failure conditions.
 
 ### 4. Perform the necessity pass
 
@@ -180,30 +206,32 @@ improve remediation clarity.
 ### 5. Validate high-risk claims
 
 Run proportionate checks first for changed-module compilation/tests, then architecture/resource
-gates, app variants, emulator/device flows, recovery/migration, release/R8, privacy, and profiling
-as risk expands. Record exact commands, directories, JDK/SDK, variants, devices, outcomes, evidence
-paths, and blockers. Assembly is not proof of runtime, permission, background work, migration,
-accessibility, or device behavior.
+gates, app variants, emulator/device flows, recovery/migration, release/R8, privacy, profiling, and
+affected product rules as risk expands. Record exact commands, directories, JDK/SDK, variants,
+devices, outcomes, evidence paths, blockers, and rule IDs proved. Assembly is not proof of runtime,
+permission, background work, migration, accessibility, or device behavior.
 
 ### 6. Report and converge
 
-Report findings, residual risk, blocked checks, required follow-up, and the necessity assessment.
-Never score if not asked. When numeric scoring is requested, apply `PROPORTIONALITY` from the quality
-model; the score is diagnostic unless the user or repository explicitly makes a threshold binding.
+Report findings, residual risk, blocked checks, required follow-up, the necessity assessment, and the
+product-contract result. Never score if not asked. When numeric scoring is requested, apply
+`PROPORTIONALITY` from the quality model; the score is diagnostic unless the user or repository
+explicitly makes a threshold binding.
 
 ## Finding contract
 
 - `blocker`: unsafe to merge due to behavior, build, data integrity, or privacy failure.
 - `high`: correctness, coroutine/lifecycle, architecture, recovery, accessibility, or major test defect.
 - `medium`: concrete maintainability, API, test-quality, unjustified mechanism cost, hidden topology,
-  performance risk, or non-trivial product-quality gap.
+  undocumented or incorrect durable product policy, performance risk, or another non-trivial
+  product-quality gap.
 - `low`: bounded cleanup or consistency issue; never use it for subjective style.
 
 Each finding includes severity, exact location/evidence, violated contract, impact, required proof,
-and minimal remediation. Architecture contradictions route to Architect; implementation, test, and
-producible-evidence defects route to Developer; product, scope, authority, approvals, external
-state, and risk acceptance route to Root/user. Material unearned complexity is never reduced to a
-subjective style note.
+and minimal remediation. Architecture contradictions route to Architect; implementation, test,
+product-contract maintenance, and producible-evidence defects route to Developer; product, scope,
+authority, approvals, external state, and risk acceptance route to Root/user. Material unearned
+complexity and missing product-contract maintenance are never reduced to subjective style notes.
 
 Do not file `state-explosion` merely because several concrete states share a projection; establish
 full behavioral equivalence first. Treat hidden discriminators and topology relocation as concrete
@@ -216,7 +244,9 @@ validation gaps and residual risk.
 
 Before closing, provide:
 
-- validation performed;
+- validation performed and product rule IDs proved;
+- `PRODUCT-CONTRACT-DELTA`: `NONE` or the verified rules added, changed, or superseded;
+- product-contract synchronization follow-up or `NONE`;
 - confirmed findings ordered by severity;
 - blocked/not-run checks;
 - residual risk;
@@ -224,9 +254,9 @@ Before closing, provide:
 - necessity result, including unjustified mechanisms, justified projection-equivalent states,
   topology relocation, or `NONE`.
 
-If required evidence is missing, do not mark ready. Route producible implementation evidence to
-`KOTLIN_DEVELOPER` as `CHANGES_REQUIRED`; route missing user authority or external state to `ROOT`
-as `BLOCKED`.
+If required evidence or product-contract maintenance is missing, do not mark ready. Route producible
+implementation evidence or contract corrections to `KOTLIN_DEVELOPER` as `CHANGES_REQUIRED`; route
+missing user authority or external state to `ROOT` as `BLOCKED`.
 
 ## Handoff contract
 
@@ -237,11 +267,13 @@ merely to merge duplicate instructions. Repository-local handoff rules may add p
 limits, scoring, or routes, but they do not redefine this skill's reusable Reviewer doctrine.
 
 Otherwise read and follow the [Kotlin handoff contract](references/handoff-contract.md) before
-emitting exactly one `KOTLIN-HANDOFF/1` block.
+emitting exactly one `KOTLIN-HANDOFF/1` block. Put `PRODUCT-CONTRACT-DELTA` where the complete local
+contract requires it, or in `CURRENT-STATE` when using the generic contract.
 
 - A ready implementation routes `APPROVED` to `COMPLETE` only when applicable hard gates pass and no
   `blocker`, `high`, or `medium` finding remains.
-- Implementation or test findings route `CHANGES_REQUIRED` to `KOTLIN_DEVELOPER`.
+- Implementation, test, or product-contract maintenance findings route `CHANGES_REQUIRED` to
+  `KOTLIN_DEVELOPER`.
 - Architecture findings route `CHANGES_REQUIRED` to `KOTLIN_ARCHITECT`.
 - Missing user authority or external state routes `BLOCKED` to `ROOT`.
 - For a standalone review or repository-classified `TRIVIAL` root self-review, return the normal
