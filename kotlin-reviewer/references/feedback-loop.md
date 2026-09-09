@@ -33,7 +33,7 @@ For lifecycle work, the next current handoff summarizes:
 
 - findings addressed;
 - files and behavior changed;
-- tests and gates rerun with exact results;
+- relevant tests/gates run or reused, with exact results and evidence provenance;
 - any declined medium/low finding with rationale and explicit user decision;
 - any architecture decision that had to be revised.
 
@@ -63,7 +63,7 @@ change only dimensions for which new evidence exists, then recompute the weighte
 finding may remain at the source-evidence cap until the required executable gate runs. Do not
 increase a score because the developer explained intent.
 
-Stop the loop when fixed readiness thresholds and hard gates pass, or clearly report the remaining
+Stop the loop when applicable readiness conditions and hard gates pass, or clearly report the remaining
 blocker, authority needed, or external-state dependency. Open blocker, high, and medium findings
 block readiness under this handoff framework. Blocker/high findings cannot be accepted; medium/low
 acceptance requires a user-routed decision. Do not average away a required finding.

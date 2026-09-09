@@ -27,6 +27,11 @@ localized/accessibility resources and runtime presentation.
 
 ## Review passes
 
+Apply only the passes relevant to changed behavior, named invariants, and required repository gates.
+These risk lists do not create acceptance criteria for hypothetical failures or unrelated surfaces.
+Reuse inspected evidence for the same diff and environment; replay only when provenance, relevance,
+or remaining uncertainty warrants it. Independent assessment does not require duplicate full suites.
+
 ### Correctness and safety
 
 Check invariants, null/error handling, invalid input, finite failure mapping, stale results, retries,
@@ -59,8 +64,8 @@ bodies. Confirm outputs translate result unions into atomic events, retry legali
 topology, and guards/cancellation policies are capture-free named function references used only for
 correlation, stale rejection, capability, or genuine value policy.
 
-Compare the pre/post accepted-route matrix during a topology refactor. For every forbidden pair and
-rejected guard side, require raw-machine proof of no state transition/emission and a capability spy
+Compare the pre/post accepted-route matrix during a topology refactor. For contract-relevant forbidden pairs and
+rejected guard sides, require raw-machine proof of no state transition/emission and a capability spy
 proving no output ran. An unchanged UI projection or an equal-state transition is insufficient
 because it can conceal observable machine work.
 
@@ -91,6 +96,61 @@ typed Navigation, message durability, semantic controls, accessibility, font sca
 keyboard/D-pad input, TalkBack, light/dark and increased contrast, animation scale/Reduce Motion,
 supported locales, adaptive layouts and window classes, deterministic previews, min-SDK
 availability, and live interaction proof where risk requires it.
+
+### Workflow proportionality
+
+Ask which representation yields the smallest explicit topology and the lowest total reasoning cost
+while still passing behavioral and invariant evidence. Do not assume that fewer concrete states are
+better.
+
+For apparent duplicate states, distinguish:
+
+- **projection equivalence:** equal UI only;
+- **interaction equivalence:** the same event types are accepted;
+- **full behavioral equivalence:** every accepted event has equivalent meaning, guards, semantic
+  outputs, next-state behavior, invariants, and future paths.
+
+Only full behavioral equivalence supports a collapse. Verify whether:
+
+- the states represent the same business condition and prove the same data invariants;
+- every accepted or rejected event has the same meaning in both states;
+- the same event selects the same semantic output and the same or behaviorally equivalent next
+  state;
+- cancellation, replacement, stale-result, correlation, lifetime, persistence, commit/rollback,
+  and recovery semantics are equivalent;
+- differences are ordinary data parameters of one route/effect family rather than operation-kind
+  choices;
+- a natural merged payload exists without invalid combinations.
+
+Also check the inverse. A merge that requires a `kind`, `mode`, `phase`, `operation`, or retry-plan
+discriminator, nullable payload union, runtime type test, guard cascade, or `when` that chooses
+between former output/transition families has probably relocated topology.
+
+Keep separate states when their type identity expresses a business phase or historical fact, proves
+different data availability, prevents impossible combinations, marks a different owner/commit/
+rollback/recovery boundary, makes the same event select a different semantic output or next path, or
+keeps the DSL declarative and sentence-readable.
+
+For retries, a shared state is appropriate when ordinary data parameterizes one semantic retry
+operation. Distinct retry states are appropriate when Retry selects different effect families,
+business phases, owners, commit boundaries, rollback rules, or recovery paths—even if they share one
+UI and one Retry event. A closed retry plan is acceptable only when it is a meaningful domain
+concept and demonstrably clearer than explicit state alternatives.
+
+Continue checking whether:
+
+- events represent semantic decisions rather than internal function returns;
+- correlation is required by real overlap, replacement, stale completion, repeated delivery, or
+  cross-owner acknowledgement;
+- persistence protects an accepted process-recreation or migration obligation;
+- validation, retry, rollback, or cleanup policy is duplicated across owners;
+- tests or validators freeze a private decomposition rather than behavior or a forbidden boundary;
+- a one-implementation interface or wrapper has a current consumer-owned reason to exist.
+
+Classify concrete findings as `state-explosion`, `mechanistic-event-model`, `duplicated-policy`,
+`speculative-recovery`, `unearned-abstraction`, `implementation-fossilizing-guardrail`,
+`topology-coupled-test`, `hidden-state-discriminator`, or `topology-relocation` where those labels
+improve remediation clarity.
 
 ### Tests and evidence
 

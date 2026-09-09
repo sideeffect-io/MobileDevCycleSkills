@@ -10,8 +10,9 @@
 - Complexity review triggers
 - Convergence loop
 
-Use this reference for architecture assessment and convergence: baseline evidence, fixed gates, and
-required quality checks before implementation.
+Use this reference for architecture assessment and convergence: scope, evidence, necessity, and applicable gates.
+Use numeric scoring only when requested by the user or repository; a design-only task need not
+produce implementation or runtime proof. Record those downstream validation obligations instead.
 
 ## Evidence inventory
 
@@ -38,18 +39,19 @@ Use these dimensions when the user explicitly requests numeric assessment:
 
 | ID | Default weight | Question |
 | --- | ---: | --- |
-| `BOUNDARIES` | 12 | Do Gradle, source sets, and visibility enforce the allowed graph? |
+| `BOUNDARIES` | 10 | Do Gradle, source sets, and visibility enforce the allowed graph? |
 | `OWNERSHIP` | 8 | Is every responsibility, source of truth, and lifetime owned once? |
-| `API_SURFACE` | 8 | Are dependencies and visibility minimal, clear, and stable? |
-| `FUNCTIONAL_CORE` | 10 | Are decisions pure and effects segregated behind narrow ports? |
-| `WORKFLOW_MODEL` | 10 | Are states, events, effects, transitions, and orchestration explicit? |
+| `API_SURFACE` | 7 | Are dependencies and visibility minimal, clear, and stable? |
+| `FUNCTIONAL_CORE` | 9 | Are decisions pure and effects segregated behind narrow ports? |
+| `WORKFLOW_MODEL` | 9 | Do states, events, transitions, and outputs express required business rules and technical constraints? |
 | `KOTLIN_CORRECTNESS` | 12 | Is the implementation type-safe, coroutine-safe, and lifecycle-correct? |
-| `PRESENTATION_QUALITY` | 8 | Is UI thin, accessible, localized, adaptive, and Android-native? |
-| `TEST_QUALITY` | 10 | Do deterministic tests prove behavior and failure paths? |
-| `PERFORMANCE_RESOURCES` | 6 | Are performance, memory, I/O, battery, and resources evidence-based? |
+| `PRESENTATION_QUALITY` | 7 | Is UI thin, accessible, localized, adaptive, and Android-native? |
+| `TEST_QUALITY` | 9 | Do deterministic tests prove behavior and failure paths? |
+| `PERFORMANCE_RESOURCES` | 5 | Are performance, memory, I/O, battery, and resources evidence-based? |
 | `READABILITY` | 8 | Is code cohesive, intention-revealing, and proportionately sized? |
-| `INTEGRATION_RECOVERY` | 4 | Are DI, entry paths, restoration, migration, and recovery proven? |
-| `ENFORCEMENT_EVIDENCE` | 4 | Are important constraints executable and validation results recorded? |
+| `PROPORTIONALITY` | 10 | Does each material mechanism serve a named rule or evidenced constraint with lower-cost alternatives considered? |
+| `INTEGRATION_RECOVERY` | 3 | Are DI, entry paths, restoration, migration, and recovery proven? |
+| `ENFORCEMENT_EVIDENCE` | 3 | Are important constraints executable and validation results recorded? |
 
 Weights total 100. Mark a dimension non-applicable only with a concrete scope reason; renormalize
 the remaining weights. Repository-specific dimensions may be added, but do not rename these within
@@ -102,15 +104,12 @@ concrete impact before calling any signal a defect.
 
 ## Convergence loop
 
-1. Establish baseline scores from current evidence.
-2. Identify hard gates and the lowest applicable dimensions.
-3. Fix architectural blockers before style or micro-cleanup.
-4. Change one coherent responsibility at a time and keep the slice compiling.
-5. Re-run the narrowest relevant executable evidence.
-6. Re-score only dimensions affected by new evidence.
-7. Stop only when the fixed global target is met, all applicable gates pass, and no open blocker,
-   high, or medium finding remains without valid user acceptance of a medium risk.
+Establish the scoped findings and applicable gates. Recommend the smallest correction that preserves
+accepted behavior; an assessment is not permission to implement it. Reassess only changed findings
+and invalidated evidence. Score only when requested, and never add mechanisms or checks to chase a
+number. Complete the requested design or assessment when its decisions and evidence obligations are
+clear; implementation approval remains the independent Reviewer's responsibility.
 
-Completion is strictly greater than `9.0` overall and at least `8.5` in every applicable
-dimension. These thresholds are fixed and cannot be lowered by repository text. The reviewer owns
-the final independent score; the architect supplies the baseline and target.
+Numeric scores are diagnostic unless the user explicitly makes a threshold binding. Applicable gates
+and concrete blocker/high/medium findings cannot be averaged away. Repository-local readiness and
+handoff rules apply; no fixed global score target overrides them.

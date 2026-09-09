@@ -4,6 +4,12 @@
 
 ## Test at the owning boundary
 
+Select only behavior and risks affected by the change, plus mandatory repository gates. The table
+is a routing aid, not a requirement to test every row or imagined failure. Reuse sufficient current
+coverage. Add tests for changed behavior, named invariants, or reproduced regressions; do not mirror
+reversible low-impact implementation edits. Once required checks pass, rerun or broaden only when a
+change, failure, invalidated evidence, or concrete unresolved concern warrants it.
+
 | Owner | Prove |
 | --- | --- |
 | Domain/pure policy | invariants, boundaries, parsing, finite failures, deterministic projections |
@@ -58,7 +64,7 @@ mapping and stream completion. Correlate and reject stale results in tests.
 4. Run focused tests after each coherent step.
 5. Remove the obsolete path only after parity is proved.
 6. Remove stale imports, names, source membership, providers, factories, tests, and guardrails.
-7. Run architecture and top-level validation.
+7. Run affected architecture and integration gates; reuse still-valid results.
 
 Do not mix a broad rename, architecture migration, concurrency migration, and user-visible change
 unless correctness makes them inseparable. Record intentional deviations concisely in the current

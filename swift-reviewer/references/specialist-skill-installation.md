@@ -1,22 +1,14 @@
 # Missing Specialist Installation
 
-Use this reference only when the specialist overlay selected in `SKILL.md` is not locally available.
+Use only when required evidence cannot be obtained with available capabilities, or when the user
+asks to install a specialist. A missing optional skill is not itself a blocker.
 
-1. Name the missing skill and the confidence or evidence it would add. Continue without it only when
-   the Reviewer contract can still be satisfied; otherwise stop the affected slice and route the
-   missing capability to the root.
-2. Never install or enable a skill or plugin without explicit user authorization.
-3. After authorization, use the verified distribution channel:
-   - Install **Build iOS Apps** from Codex Plugins for `ios-app-intents`, `ios-debugger-agent`,
-     `ios-ettrace-performance`, or `ios-memgraph-leaks`.
-   - Invoke `$skill-installer` with the exact GitHub skill URL for `swift-concurrency`
-     (`https://github.com/AvdLee/Swift-Concurrency-Agent-Skill/tree/main/skills/swift-concurrency`),
-     `swiftui-expert`
-     (`https://github.com/sideeffect-io/swift-expert-skill/tree/main/swiftui-expert-skill`), or
-     `mobile-ios-design`
-     (`https://github.com/wshobson/agents/tree/main/plugins/ui-design/skills/mobile-ios-design`).
-   - For another focused SwiftUI skill, verify its owning plugin or repository first, then use Codex
-     Plugins or `$skill-installer` with that exact source. Do not guess a source or assume a bare skill
-     id exists in the curated catalog.
-4. Re-read the installed `SKILL.md` frontmatter and load the exact exposed skill name on the next turn.
-   If Codex does not detect it, restart Codex.
+First check the live skill catalog and tools, including plugin-qualified names. Continue with an
+equivalent capability, inspected source, or official documentation when it satisfies the contract.
+Otherwise name the exact missing evidence, route only the affected slice to Root, and continue
+independent authorized work.
+
+If installation is needed, use the available plugin or skill installer with a verified source and
+the user's existing authorization. Ask only for authorization not already granted; do not silently
+install software. Verify the installed skill's frontmatter and live availability before using it.
+Do not require a restart unless discovery actually fails and the installer/runtime calls for one.

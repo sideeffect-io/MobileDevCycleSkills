@@ -1,6 +1,6 @@
 ---
 name: kotlin-developer
-description: Implement and refactor production Kotlin Android code and tests after ownership and module boundaries are known. Use for Jetpack Compose, ViewModels and StateFlow, coroutine-safe effects, repositories and data sources, Kotlin State Machine workflows, dependency injection, local or instrumented tests, debugging, profiling, and behavior-preserving refactors. Use kotlin-architect first when ownership, module direction, public API, source-of-truth policy, or workflow topology is unsettled; use kotlin-reviewer for independent assessment.
+description: Implement, refactor, debug, and test Kotlin Android/Compose within settled ownership and workflow boundaries. Use kotlin-architect for unresolved architecture and kotlin-reviewer for review.
 ---
 
 # Kotlin Developer
@@ -29,11 +29,19 @@ stricter project-specific constraints; they should point here rather than restat
 6. Implement one compiling slice at a time and verify incrementally.
 7. Before changing a third-party dependency, plugin, repository, version, or pin policy, verify the
    required architecture decision and user approval.
-8. Escalate product-intent, scope, risk, approvals, and external-state decisions with concrete
-   options.
 
 Read `must`, `never`, and `required` as contracts; `prefer` is an evidenced default; `consider` is
 optional.
+
+Use the request and existing authorization to resolve routine implementation and validation choices.
+Ask only when an undiscoverable answer would materially change product behavior, scope, authority,
+or irreversible consequences. Continue independent authorized work while that decision is pending.
+In a lifecycle, route the blocked slice to Root; do not turn a preference or a recoverable tool error
+into a permission gate. User direction takes precedence over this skill's defaults.
+
+Load only task-relevant references and sections; a routing table is an index, not a checklist.
+Reuse current evidence and report concise decisions, findings, and proof without repeating the
+request, skill doctrine, source, or full logs. High reasoning effort does not justify broader scope.
 
 ## Lean implementation contract
 
@@ -47,7 +55,7 @@ Do not expand the architecture envelope silently. A material mechanism not prese
 requires an acceptance criterion, named invariant or architecture decision, reproduced defect,
 concrete Android/framework/API requirement, credible named security/privacy/data-loss scenario, or
 two current consumers requiring variation. Return an architecture contradiction instead of
-inventing the mechanism.
+inventing a change to binding ownership or workflow topology.
 
 Reducing concrete-state count is not itself simplification. A UI projection is many-to-one, so
 states that render identically may still encode different business facts, effect choices, commit
@@ -63,25 +71,14 @@ business states merely because several states share one UI projection.
 
 ## Product-contract maintenance
 
-When repository guidance defines a product contract, update it in the same focused change whenever
-accepted scope introduces, changes, or supersedes a durable product decision. Do not leave the
-decision only in chat, the handoff, code, or tests.
+When accepted work adds, changes, or supersedes a durable product decision, update the repository's
+product contract in the same focused change. Preserve stable rule IDs and shared meanings across
+in-scope repositories; record an explicit synchronization follow-up for an unavailable or out-of-scope
+counterpart. Report `PRODUCT-CONTRACT-DELTA: NONE` or the affected IDs.
 
-- Reference and preserve existing stable rule IDs.
-- Write the outcome, durable data meaning, privacy/security or destructive-action policy, or parity
-  decision that must survive a rewrite; do not document modules, APIs, states/events, checkpoints,
-  retries, DI, call ordering, or exact tests unless the mechanism itself was explicitly accepted as
-  product policy.
-- For shared rules and in-scope platform repositories, update every copy with the same ID and
-  meaning. When a counterpart is unavailable or out of scope, record the precise synchronization
-  follow-up instead of silently diverging.
-- Update technical sidecars only for affected ownership, platform, or validation deltas and refer to
-  the product rule ID rather than copying its full text.
-- Report `PRODUCT-CONTRACT-DELTA: NONE | <rule IDs added, changed, or superseded>` in the verification
-  result or lifecycle handoff.
-
-If the requested implementation would require a product decision that has not been accepted, stop
-and escalate rather than inventing or documenting it as policy.
+Document observable outcomes and durable policy, not modules, APIs, state/event topology, DI, retry
+mechanics, or tests unless the user makes the mechanism contractual. Technical sidecars own technical
+deltas and point to rule IDs. Route an unaccepted product choice to Root before implementing it.
 
 ## Resource routing
 
@@ -106,7 +103,7 @@ Use `assets/ProductionExample` as a compiled example only.
 
 ### 1. Make the contract executable
 
-Restate observable behavior, applicable product rule IDs, the product-contract delta or `NONE`,
+Identify accepted behavior, affected product rule IDs, the product-contract delta or `NONE`,
 admitted adverse paths, deliberately unmodeled paths, finite failures, effects, cancellation/
 lifetime, process recovery, accessibility/localization, performance risk, and acceptance tests.
 Read tests before editing; add characterization tests when preserved behavior is unclear.
@@ -136,33 +133,12 @@ result guards only when replacement or late completion can actually occur. Rethr
 `CancellationException`; never use `GlobalScope`, extra supervision, dispatcher changes, or broad
 catches merely to silence a symptom.
 
-For Kotlin State Machine work, implement behavioral modes and semantic events rather than one state
-or event per suspending call. Resolve the actual dependency revision and choose output cardinality
-intentionally:
-
-- use `Output` returning one `EventSet` when one semantic outcome changes the next decision;
-- use `OutputFlow` returning `Flow<EventSet>` for genuine zero-to-many observation or production;
-- let `Output` return `null` when a fully contained best-effort effect needs no machine decision.
-
-Internal execution topology is independent of event cardinality. One `Output` may compose one or
-several injected suspending functions sequentially, concurrently through structured concurrency
-(`coroutineScope` plus child `async` work), or as a small combination of sequential stages and
-concurrent groups when the business dependency graph requires it. Parallelize only semantically
-independent operations; preserve ordering for data dependencies, transactions, observable
-sequencing, privacy/data-integrity constraints, rate limits, or other Android/platform invariants.
-The output owns every child Job, cancellation, and aggregate failure/result mapping.
-
-A no-event output remains owned by the state-machine runtime. Never launch an unowned coroutine to
-simulate fire-and-forget. Keep intermediate results local to one output or coordinator when no
-intermediate event changes machine policy, whether the injected functions execute sequentially or
-concurrently. Emit only the smallest semantic result needed by the machine; do not emit one event
-per function merely because several functions are invoked.
-
-When several states share one UI projection, inspect their business meaning and complete route
-behavior before considering a merge. If the same event selects different semantic outputs or next
-paths, or state identity proves a different invariant or payload availability, preserve the
-explicit states. A merged state whose `kind`, `phase`, `operation`, or retry-plan payload is examined
-with `when` to select outputs has relocated topology rather than removed it.
+For machine work, read [State-machine implementation](references/state-machine-implementation.md) before editing.
+Map the changed routes to business rules or evidenced technical constraints. Choose zero, one, or
+many semantic output events from decisions the machine needs, independently of internal call count.
+Keep one cohesive business effect inside one output when intermediate results change no machine
+policy. That output owns structured child work, sequencing, cancellation, and aggregate failures;
+it never launches unowned work. Preserve behaviorally distinct states despite equal UI projections.
 
 ### 4. Keep Compose thin and native
 
@@ -184,33 +160,12 @@ select a custom agent profile.
 
 ### 5. Perform the subtractive pass
 
-Before final validation and handoff, review the implementation with deletion, localization, and
-clarification as the objective:
-
-- inspect apparent duplicate states using full behavioral equivalence, not UI projection alone;
-- merge states only when they represent the same business condition and, for every accepted event,
-  have equivalent guards, semantic outputs, next-state behavior, lifetime, cancellation,
-  persistence, recovery, and invariants;
-- do not merge when the result needs a discriminator, payload union, invalid nullable combination,
-  runtime type test, or conditional output/transition dispatch to reconstruct the old alternatives;
-- preserve separate states when their explicit types make business phases, data guarantees, effect
-  selection, commit boundaries, or DSL routes clearer;
-- keep one cohesive multi-operation business effect inside one output when intermediate stages do
-  not alter machine policy, selecting sequential, concurrent, or mixed structured execution from
-  actual dependencies rather than creating one state/event per function;
-- move non-interleavable execution phases into local structured control flow;
-- collapse internal result events into the smallest semantic outcome;
-- remove forwarding wrappers and one-implementation interfaces without a consumer-owned boundary;
-- remove duplicate validation, retry, correlation, or recovery policy already guaranteed by an
-  authoritative owner;
-- remove speculative configuration, extension points, and implementation-shaped tests;
-- keep named product, safety, privacy, data-integrity, accessibility, lifecycle, and Android
-  invariants.
-
-Optimize total semantic and local-reasoning complexity, not type count. Escalate when simplification
-would contradict a binding architecture or product decision. Do not preserve an unearned mechanism
-merely because tests or validators already encode its private topology; update them to protect
-behavior, invariants, and forbidden boundaries.
+Before handoff, remove unearned wrappers, speculative extension points, duplicated authoritative
+policy, and tests that freeze private decomposition. For machine work, use the focused reference
+to check state/event growth, cohesive outputs, full behavioral equivalence, and hidden dispatch.
+Keep named invariants and meaningful state distinctions; measure total reasoning cost, not counts.
+Do not keep an unnecessary mechanism merely because a test encodes it. Update topology-shaped tests
+and guardrails with a behavior-preserving simplification, and escalate only a binding contradiction.
 
 ### 6. Verify at owner scope
 
@@ -221,31 +176,21 @@ Share one coroutine test scheduler and use virtual time or explicit gates rather
 Robolectric or instrumentation only when the Android behavior they simulate or execute is part of
 the proof.
 
-When evaluating a state merge, characterize both candidates across the accepted event alphabet and
-verify semantic output selection, next-state paths, invariants, and recovery—not only their projected
-UI. Include a negative proof when the merged payload could encode an invalid combination or when a
-conditional dispatcher would recreate the former alternatives.
-
-For multi-operation outputs, prove required ordering and safe overlap at the business boundary,
-verify aggregate failure/result mapping, and verify cancellation of all structured child jobs. Do
-not couple tests to one result event per internal function when the machine contract has one
-aggregate outcome.
+For machine changes, apply the focused reference's behavioral and output-boundary tests.
 
 ### 7. Converge with concrete evidence
 
-Format touched Kotlin files only with repository tooling. Run the narrowest proving checks first,
-then expand by risk through owner tests, module/variant compilation, lint/static and architecture/
-resource gates, app integration, emulator/device flows, release/R8, and profiling. Separate
-required, blocked, skipped, and not-run checks explicitly.
+Format touched Kotlin files with repository tooling. Run the narrowest checks that prove the
+changed behavior plus mandatory repository gates. Once they pass, broaden or repeat only for new
+changes, failures, invalidated evidence, or a concrete unresolved risk. Do not rerun an unchanged
+passing suite just because a handoff is due, or add tests for low-impact edits that mirror the code.
 
-Reconstruct the complete scoped diff and affected consumers, inspect referenced artifacts, rerun
-checks after remediations, and rerun the applicable final set before handoff. Confirm that every
-accepted product-contract delta is present and every technical sidecar reference resolves. A path or
-successful assembly alone is not behavior proof.
+Inspect the final scoped diff and affected consumers, confirm product-contract maintenance, and
+distinguish passed, failed, blocked, and not-run checks with exact evidence. Compilation proves
+compilation; it does not replace required runtime evidence.
 
-Run `scripts/validate_examples.sh` after changing the compiled example. Set
-`RUN_ANDROID_TESTS=1` with a connected emulator or device to execute Compose semantics and callback
-tests; otherwise the validator compiles those tests without claiming a device result.
+Run `scripts/validate_examples.sh` only when the compiled example or its API usage changes.
+`RUN_ANDROID_TESTS=1` needs a connected target; test compilation alone is not device proof.
 
 ## Verification handoff
 

@@ -4,6 +4,12 @@
 
 ## Test at the owning boundary
 
+Select only behavior and risks affected by the change, plus mandatory repository gates. The table
+is a routing aid, not a requirement to test every row or imagined failure. Reuse sufficient current
+coverage. Add tests for changed behavior, named invariants, or reproduced regressions; do not mirror
+reversible low-impact implementation edits. Once required checks pass, rerun or broaden only when a
+change, failure, invalidated evidence, or concrete unresolved concern warrants it.
+
 | Owner | Prove |
 | --- | --- |
 | model/pure policy | invariants, boundaries, parsing, finite failures, projections |
@@ -46,7 +52,7 @@ transition as rejection. Call deterministic shutdown barriers when the runtime e
 4. Run focused tests after each coherent slice.
 5. Remove the obsolete owner only after parity is proved.
 6. Search all variants/source sets for stale imports, fields, Flows, Jobs, providers, and tests.
-7. Run architecture and app/runtime validation.
+7. Run affected architecture and app/runtime gates; reuse still-valid results.
 
 Do not mix broad rename, module migration, coroutine migration, and user-visible change unless
 correctness makes them inseparable. Never disable a failing/flaky test without a tracked reason and

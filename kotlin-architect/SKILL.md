@@ -1,6 +1,6 @@
 ---
 name: kotlin-architect
-description: Design and assess architecture for Kotlin Android apps. Use before implementation when Gradle module boundaries, ownership, public APIs, repositories or sources of truth, state-machine topology, persistence, migrations, security, background work, or cross-feature workflows are unsettled.
+description: Design or assess Kotlin Android architecture when module ownership, dependency direction, public contracts, sources of truth, or workflow topology is unsettled. Use for architecture design and audits; use kotlin-developer for settled implementation.
 ---
 
 # Kotlin Architect
@@ -25,17 +25,25 @@ stricter project-specific constraints; they should point here rather than restat
    dependencies, source sets, visibility, DI composition, tests, and guardrails. Preserve unrelated
    edits.
 3. Treat build files, resolved graphs, compiled APIs, source, and tests as source of truth.
-   Documentation explains intent, not authority.
+   The product contract supplies durable intent; technical prose explains implementation.
 4. Preserve product behavior unless the requested outcome explicitly changes it.
 5. Resolve ownership, dependency direction, public seams, source-of-truth policy, workflow
    behavior, delivery order, risks, and validation before proposing code changes.
 6. Choose the least conceptually complex design that satisfies accepted behavior, named invariants,
    repository boundaries, and current approved extensibility.
-7. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to
-   the user with concrete options.
 
 Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless
 evidence supports another valid choice; `consider` is a prompt and `only when` is a hard boundary.
+
+Use the request and existing authorization to resolve routine implementation and validation choices.
+Ask only when an undiscoverable answer would materially change product behavior, scope, authority,
+or irreversible consequences. Continue independent authorized work while that decision is pending.
+In a lifecycle, route the blocked slice to Root; do not turn a preference or a recoverable tool error
+into a permission gate. User direction takes precedence over this skill's defaults.
+
+Load only task-relevant references and sections; a routing table is an index, not a checklist.
+Reuse current evidence and report concise decisions, findings, and proof without repeating the
+request, skill doctrine, source, or full logs. High reasoning effort does not justify broader scope.
 
 ## Lean correctness contract
 
@@ -80,21 +88,13 @@ meaningful business-state distinctions to disappear merely because those states 
 
 ## Product-contract stewardship
 
-When repository guidance defines a product contract, treat it as the authority for durable product
-behavior and stable rule IDs. Separate the product decision from its technical realization:
+When the repository defines a product contract, reference its affected stable rule IDs. Identify
+`PRODUCT-CONTRACT-DELTA: NONE` or the durable outcomes the Developer must add, amend, or supersede
+in the same change. Shared rules retain the same ID and meaning across in-scope repositories;
+record an explicit synchronization follow-up for an unavailable counterpart.
 
-- reference existing product rule IDs in the design and `BINDING` items rather than copying their
-  complete text;
-- when accepted scope introduces, changes, or supersedes durable behavior, define a concise
-  `PRODUCT-CONTRACT-DELTA` by outcome and require the Developer to update the contract in the same
-  focused change;
-- do not promote modules, APIs, state/event topology, checkpoints, retries, DI, call ordering, or
-  test shapes into product policy unless the user explicitly makes that mechanism contractual;
-- for a shared rule across in-scope platform repositories, preserve the same stable ID and meaning;
-  when a counterpart is unavailable, record the exact synchronization follow-up.
-
-A design is incomplete when it silently changes a durable product decision without identifying the
-contract delta or required user authority.
+Keep implementation mechanisms out of product policy unless the user makes the mechanism itself
+contractual. Resolve missing product authority before binding a changed outcome.
 
 ## Resource routing
 
@@ -113,8 +113,8 @@ Load only rows needed by the task.
 Use `scripts/inventory_gradle.py` for a quick Gradle inventory, then verify against the live build
 and source. Use `assets/ArchitectureExample` only as a compiled example, never repository truth.
 
-When a listed specialization is installed and its risk dominates, load that specialist skill in
-the current Architect agent. Do not spawn or switch to a specialist agent or select a custom agent
+When an installed specialization resolves a material design uncertainty, load it in the current
+Architect agent. Do not spawn or switch to a specialist agent or select a custom agent
 profile.
 
 | Triggered risk | Specialist | Installed skill id | Use case |
@@ -181,27 +181,12 @@ components, dispatchers, service locators, or navigation controllers.
 
 ### 5. Choose mechanisms intentionally
 
-Prefer, in order, pure functions, local presentation state, one structured suspending function, or
-a small coordinator when they completely express the contract. Use Kotlin State Machine when
-persistent state-dependent legality, replaceable or long-lived outputs, retry/recovery, Navigation
-lifetime, correlation, or cross-owner coordination actually requires it.
-
-For state machines, design states around business facts and behavioral modes rather than individual
-suspending calls. Several states may intentionally share one UI projection. Keep them separate when
-the same event selects different semantic outputs or future paths, their types prove different
-payload availability or invariants, or they mark different owner/commit/rollback/recovery
-boundaries.
-
-Consider a collapse only when every accepted event has the same meaning, guard, semantic output, and
-behaviorally equivalent next state, with equivalent cancellation, lifetime, persistence, and
-recovery semantics. Merge only when one natural payload captures ordinary data for the same route
-and the resulting DSL is clearer. Never trade explicit states for a discriminator-driven `when`
-that selects former output families.
-
-For each admitted machine define owner, initial state, lifetime/scope, activation, semantic states
-and events, outputs/capabilities, transitions, output cardinality, cancellation, correlation,
-recovery, outcomes, and communication. Read [State-machine feature design](references/state-machine-features.md)
-and compile proposed API usage against the resolved dependency revision.
+Choose a pure function, local presentation state, structured async operation, or small coordinator
+when it fully expresses the contract. Admit a machine only for a real workflow decision or lifetime
+need. Before binding topology, read [State-machine feature design](references/state-machine-features.md)
+and map states, events, transitions, and outputs to business rules or evidenced technical constraints.
+Internal call boundaries do not establish those constraints. Preserve distinct business facts even
+when they share a UI; merge only with full behavioral equivalence and lower total reasoning cost.
 
 ### 6. Make the contract executable
 

@@ -1,6 +1,6 @@
 ---
 name: swift-architect
-description: Design and assess architecture for Swift 6+ iOS and macOS apps. Use before implementation when SwiftPM boundaries, ownership, public APIs, architecture complexity, state-machine topology, persistence, migrations, security, App Intents, or other system surfaces are unsettled.
+description: Design Swift architecture and new-project scaffolds, or assess unsettled ownership, dependencies, public contracts, persistence, and workflows. Use for architecture design and audits; use swift-developer for implementation within settled boundaries.
 ---
 
 # Swift Architect
@@ -23,18 +23,26 @@ project-specific constraints; they should point here rather than restating gener
 1. Read applicable `AGENTS.md` files and repository guidance.
 2. Inspect branch, worktree, relevant diff, manifests, imports, public symbols, composition roots,
    tests, dependency pins, and guardrails. Preserve unrelated edits.
-3. Treat manifests, source, compiled APIs, and tests as source of truth. Documentation explains
-   intent, not authority.
+3. Treat manifests, source, compiled APIs, and tests as implementation truth. The product contract
+   supplies durable intent; technical prose explains implementation.
 4. Preserve product behavior unless the requested outcome explicitly changes it.
 5. Resolve ownership, dependency direction, public seams, workflow behavior, delivery order, risks,
    and validation before proposing code changes.
 6. Choose the least conceptually complex design that satisfies accepted behavior, named invariants,
    repository boundaries, and current approved extensibility.
-7. Escalate missing product intent, scope, authority, dependency approvals, or unresolved risk to
-   the user with concrete options.
 
 Read `must`, `never`, and `required` as enforceable contracts. `prefer` is the default unless
 evidence supports another valid choice; `consider` is a prompt and `only when` is a hard boundary.
+
+Use the request and existing authorization to resolve routine implementation and validation choices.
+Ask only when an undiscoverable answer would materially change product behavior, scope, authority,
+or irreversible consequences. Continue independent authorized work while that decision is pending.
+In a lifecycle, route the blocked slice to Root; do not turn a preference or a recoverable tool error
+into a permission gate. User direction takes precedence over this skill's defaults.
+
+Load only task-relevant references and sections; a routing table is an index, not a checklist.
+Reuse current evidence and report concise decisions, findings, and proof without repeating the
+request, skill doctrine, source, or full logs. High reasoning effort does not justify broader scope.
 
 ## Lean correctness contract
 
@@ -77,23 +85,27 @@ architecture. They must not freeze private topology or force extra production co
 make an implementation decomposition exhaustively testable. They also must not force meaningful
 business-state distinctions to disappear merely because those states render identically.
 
+When an owner uses SwiftStateMachine, scaffold its machine declarations in this stable four-file
+layout: `StateMachine/States.swift` contains every concrete state and its `SuperState` presentation
+projection; `StateMachine/Events.swift` contains every concrete event and the owner’s super-event
+marker; `StateMachine/Outputs.swift` contains every output definition, effect body, and output
+cancellation policy; and `StateMachine/StateMachine.swift` contains the machine alias/factory,
+`When`/`On`/`Transition` routes, and named guards. Input, Outcome, and capability contracts may
+remain in a neighboring contract file. Apply this per behavior-owning feature or navigation owner;
+do not create empty machine files for stateless features. Prefer an immutable struct projection when
+SwiftUI needs shared loading, failure, control, or form properties directly. Retain a semantic enum
+when it represents genuinely exclusive content or destinations with their required payloads; do not
+wrap an enum in a struct merely to preserve the same switch tree.
+
 ## Product-contract stewardship
 
-When repository guidance defines a product contract, treat it as the authority for durable product
-behavior and stable rule IDs. Separate the product decision from its technical realization:
+When the repository defines a product contract, reference its affected stable rule IDs. Identify
+`PRODUCT-CONTRACT-DELTA: NONE` or the durable outcomes the Developer must add, amend, or supersede
+in the same change. Shared rules retain the same ID and meaning across in-scope repositories;
+record an explicit synchronization follow-up for an unavailable counterpart.
 
-- reference existing product rule IDs in the design and `BINDING` items rather than copying their
-  complete text;
-- when accepted scope introduces, changes, or supersedes durable behavior, define a concise
-  `PRODUCT-CONTRACT-DELTA` by outcome and require the Developer to update the contract in the same
-  focused change;
-- do not promote modules, APIs, state/event topology, checkpoints, retries, DI, call ordering, or
-  test shapes into product policy unless the user explicitly makes that mechanism contractual;
-- for a shared rule across in-scope platform repositories, preserve the same stable ID and meaning;
-  when a counterpart is unavailable, record the exact synchronization follow-up.
-
-A design is incomplete when it silently changes a durable product decision without identifying the
-contract delta or required user authority.
+Keep implementation mechanisms out of product policy unless the user makes the mechanism itself
+contractual. Resolve missing product authority before binding a changed outcome.
 
 ## Resource routing
 
@@ -101,7 +113,9 @@ Load only rows needed by the task.
 
 | Need | Read |
 | --- | --- |
+| New project, initial scaffold, or rebuilding an existing skeleton | [Scaffold readiness](references/architecture-layers.md#scaffold-readiness) before declaring the foundation ready |
 | SwiftPM graph, layers, visibility, imports, resources, tests | [Architecture layers](references/architecture-layers.md) |
+| Datasource observation, feature state, or SwiftUI dependency injection | [Data observation and Environment injection](references/architecture-layers.md#data-observation-and-environment-injection), including the first live-data scaffold |
 | Functional core, SOLID, ports, adapters, protocols | [Functional and hexagonal design](references/functional-design.md) |
 | Feature/Navigation workflows and SwiftStateMachine | [State-machine feature design](references/state-machine-features.md) |
 | Inter-agent lifecycle transition without a complete repository-local contract | [Swift handoff contract](references/handoff-contract.md) |
@@ -109,24 +123,25 @@ Load only rows needed by the task.
 | Audit, metrics, and convergence | [Assessment and convergence](references/assessment-and-convergence.md) |
 | Behavior-preserving structural migration | [Migration playbook](references/migration-playbook.md) |
 
-Use `scripts/inventory_swiftpm.py` for a quick SwiftPM inventory, then verify against source. Use
-`assets/ArchitectureExample` only as a compiled example, never repository truth.
+Use manifest dumps and source inspection for SwiftPM inventory. Honor the project's selected lint
+and native test tools; do not introduce custom validation scripts as part of scaffolding unless
+requested. Use `assets/ArchitectureExample` only as a compiled example, never repository truth.
 
-When a listed specialization is installed and its risk dominates, load that specialist skill in the
-current Architect agent. Do not spawn or switch to a specialist agent or select a custom agent
+When an installed specialization resolves a material design uncertainty, load it in the current
+Architect agent. Do not spawn or switch to a specialist agent or select a custom agent
 profile.
 
 | Triggered risk | Specialist | Installed skill id | Use case |
 | --- | --- | --- | --- |
 | Concurrency/isolation risk | swift-concurrency expert | `swift-concurrency` | actor boundaries, cancellation, shared-state risk |
-| System surface integration | App Intents | `ios-app-intents` | shortcuts/intents correctness and invocation model |
+| System surface integration | App Intents | `build-ios-apps:ios-app-intents` | shortcuts/intents correctness and invocation model |
 | SwiftUI/state ownership | SwiftUI specialist | `swiftui-expert` (or focused SwiftUI skill) | complex view trees, identity, interaction behavior |
 | Interaction and navigation design | Mobile UI design | `mobile-ios-design` | HIG, routing, and interaction architecture |
-| Runtime debugging, profiling, leaks | Debug/performance specialist | `ios-debugger-agent`, `ios-ettrace-performance`, `ios-memgraph-leaks` | LLDB sessions, traces, leak and performance deltas |
+| Runtime debugging, profiling, leaks | Debug/performance specialist | `build-ios-apps:ios-debugger-agent`, `build-ios-apps:ios-ettrace-performance`, `build-ios-apps:ios-memgraph-leaks` | LLDB sessions, traces, leak and performance deltas |
 
-If an applicable specialist is absent, do not silently skip or install it. Read and follow
-[Missing specialist installation](references/specialist-skill-installation.md) to report the impact,
-request authorization, use a verified source, and decide whether the affected slice can continue.
+If a listed skill is unavailable, use equivalent installed tools, source, or official documentation
+when they can satisfy the contract. Read [Missing specialist installation](references/specialist-skill-installation.md)
+only if required evidence is otherwise unobtainable or the user requests installation.
 
 The Architect keeps design authority. Specialist skills only increase certainty; they never replace
 mandatory local constraints or authorize production edits.
@@ -167,25 +182,12 @@ execution phases as public behavior.
 
 ### 5. Choose mechanisms intentionally
 
-Prefer, in order, pure functions, local presentation state, a structured async function, or a small
-actor/coordinator when they completely express the contract. Use SwiftStateMachine when persistent
-state-dependent legality, replaceable or long-lived effects, recovery, navigation lifetime,
-correlation, or cross-owner coordination actually requires it.
-
-For state machines, design states around business facts and behavioral modes rather than individual
-async calls. Several states may intentionally share one UI projection. Keep them separate when the
-same event selects different semantic outputs or future paths, their types prove different payload
-availability or invariants, or they mark different owner/commit/rollback/recovery boundaries.
-
-Consider a collapse only when every accepted event has the same meaning, guard, semantic output, and
-behaviorally equivalent next state, with equivalent cancellation, lifetime, persistence, and
-recovery semantics. Merge only when one natural payload captures ordinary data for the same route
-and the resulting DSL is clearer. Never trade explicit states for a discriminator-driven `switch`
-that selects former output families.
-
-Emit no event, one semantic event, or an event sequence according to the resolved SwiftStateMachine
-API and actual decision needs. Read [State-machine feature design](references/state-machine-features.md)
-before binding topology.
+Choose a pure function, local presentation state, structured async operation, or small coordinator
+when it fully expresses the contract. Admit a machine only for a real workflow decision or lifetime
+need. Before binding topology, read [State-machine feature design](references/state-machine-features.md)
+and map states, events, transitions, and outputs to business rules or evidenced technical constraints.
+Internal call boundaries do not establish those constraints. Preserve distinct business facts even
+when they share a UI; merge only with full behavioral equivalence and lower total reasoning cost.
 
 ### 6. Make the contract executable
 

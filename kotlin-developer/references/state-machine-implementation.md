@@ -13,6 +13,28 @@ Do not preserve a private state/event inventory merely because existing tests en
 characterization tests for unclear behavior before simplification, then make tests assert the
 behavior or invariant rather than the old decomposition.
 
+## Trace business rules before topology
+
+For a new or redesigned machine, describe its accepted journey before enumerating types. For a
+local change, trace only affected routes and the invariants they depend on. Use a compact table or
+equivalent notes; existing clear DSL/tests may supply the trace without a new file or handoff field:
+
+| Current fact/state | Intent or semantic fact | Guard | Next fact/state | Output and result decision | Product rule or technical constraint |
+| --- | --- | --- | --- | --- | --- |
+| <known condition> | <why policy runs now> | <if required> | <changed fact, or unchanged> | <cohesive effect; zero/one/many events> | <rule ID, contract, or concrete evidence> |
+
+Every proposed state/event family, transition, and output must earn its place in this trace. A
+technical constraint qualifies when a concrete API, concurrency, transaction, privacy, or lifetime
+obligation changes legal inputs, effect selection, data guarantees, or required recovery. Naming an
+internal call completion as a new fact is not evidence. Keep such phases local to a cohesive output
+when the machine has no decision to make between them.
+
+Avoid state/event storms from multiplying operation phases, per-call successes/failures, retries,
+and unrelated flags. Reuse an intent with the same meaning; preserve distinct facts that change
+policy. Use ordinary payload data within one behavior, explicit states for different behavior, and
+never a mode dispatcher merely to hide alternatives. Counts trigger a necessity check, not quotas.
+When a constraint disappears, reassess its mechanism instead of preserving it through private tests.
+
 ## Implement behavioral topology
 
 A state exists when its identity changes a business invariant, legal inputs, semantic output,

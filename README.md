@@ -96,3 +96,16 @@ with a shared overlay whose unconditional loading would increase context for unr
   lifecycle contract.
 - After changing a skill, validate its internal links, examples/scripts when affected, synchronized
   role-local reference copies, and project sidecars that intentionally declare stricter local deltas.
+
+
+## Model adaptation and validation
+
+For GPT-6 Astra, keep instructions outcome-focused: preserve scope and existing authorization,
+admit mechanisms from concrete need, load focused references, and stop verification when required
+evidence is sufficient. Profiles pin the model; project lifecycles select reasoning effort and
+explicit role delegation. Do not copy the model guide into every skill.
+
+When changing these contracts, validate links, frontmatter, profile dispatch, and representative
+decisions as well as text size. Include a narrow UI change, a cohesive multi-call effect, distinct
+retry semantics with equal UI, and an evidenced recovery boundary. Shorter prompts alone do not
+prove better decisions. See [OpenAI Astra guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra).

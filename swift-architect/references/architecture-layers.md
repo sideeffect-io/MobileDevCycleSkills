@@ -5,7 +5,9 @@
 ## Contents
 
 - Compiler-enforced boundaries
+- Scaffold readiness
 - Default layer responsibilities
+- Data observation and Environment injection
 - Frameworks and Datasources split
 - Target design
 - Access control and API surfaces
@@ -22,6 +24,41 @@ implementation detail and micro-targets whose only purpose is moving files.
 
 A package is a distribution and resolution unit. A target is the compilation boundary. Aggregate
 products may simplify top-level linkage, but they do not replace exact target dependencies.
+
+## Scaffold readiness
+
+For a new project or a rebuilt skeleton, design the smallest buildable product slice with real
+ownership boundaries. A set of layer-named folders or empty package manifests is not sufficient
+evidence that the architecture is ready for feature implementation.
+
+- Name source targets for their implemented owners from the first slice. In a layered package
+  layout, `Features` may be a package or aggregate product, while its first source target is the
+  actual feature. Apply the same distinction to adapters, datasources, and navigation. Cohesive
+  Domain and SharedUI targets may retain those names. Do not require unused layers, a fixed package
+  count, or the reference example's feature inventory.
+- Bind each owner's exact target dependencies and public product, source/resource paths, test
+  owner, and consuming target or executable linkage. Aggregate products do not create aggregate
+  source modules. Keep feature resources with their target and tests under `Tests/<Target>Tests` unless
+  an established project layout has an equally explicit mapping.
+- At executable boundaries, separate injected construction from live SDK assembly and startup.
+  The process root retains shared owners; previews and composition tests can supply inert dependencies. Keep stateless
+  presentation as values and semantic callbacks. When the first real stateful workflow arrives,
+  demonstrate feature-owned effect ports and
+  [Environment injection](#data-observation-and-environment-injection). Apply that boundary to the
+  first live-data screen even when simple feature state is sufficient; do not manufacture a workflow,
+  registry, or service container to complete a template.
+- Require manifest validation, independent builds of affected owners, applicable executable linkage,
+  and focused native tests for implemented behavior and composition. Use the selected formatter/linter
+  for coding rules. A compile-only owner may use explicit consumer/build evidence instead of an
+  empty test target. Preserve existing pins and include test-host/resource requirements in moves.
+- Point repository guidance to the implemented stateless/stateful references and composition as
+  they become available. Record deferred owners explicitly, so later work adds independent targets
+  instead of growing a layer-wide source module. Do not copy an older app's domain or persistence
+  model merely to reproduce its layout.
+
+The Architect binds these conditions in the design or handoff. Mark implementation evidence as
+pending until the implementation role has actually produced it; an architecture-only request does
+not authorize generating production scaffolding.
 
 ## Default layer responsibilities
 
@@ -106,6 +143,38 @@ orchestrates the injected operations.
 For example, composition may create a generic CoreData DAO from `CoreDataFramework`, pass it to
 `TripsDataSource`, then close over `TripsDataSource.loadTrips` when constructing the feature-owned
 `LoadTripsOutput`. Neither the feature nor its state machine imports either concrete target.
+
+## Data observation and Environment injection
+
+Datasources are concrete tools for retrieving, observing, and mutating domain data. Their public
+objects must not be `@Observable`/`ObservableObject` presentation owners consumed by SwiftUI.
+Expose domain values and explicit observation APIs (streams or cancellable subscriptions) instead.
+Internal mutable state for listeners, identity isolation, caching, or persistence remains owned by
+the datasource where required; this rule does not require stateless datasources or one-shot reads.
+
+The app composition root constructs Datasources, adapts their operations into feature-owned
+dependencies, and injects those dependencies through typed SwiftUI Environment values. When the
+feature uses SwiftStateMachine, assemble its effect dependencies into the factory and inject that
+factory directly. For a simpler feature, inject its narrow capabilities directly. Do not place a
+concrete datasource, SDK client, broad service container, or the composition root itself in the
+feature's Environment or public dependency contract.
+
+The consuming feature root declares its Environment key with a deterministic, side-effect-free
+default, reads it through `@Environment`, and owns its presentation state. Use `@Entry` when supported
+by the toolchain; otherwise use a typed `EnvironmentKey`. The feature uses SwiftStateMachine only
+when its workflow warrants it, or simpler local/observable state and structured work otherwise.
+Child views receive immutable presentation and semantic callbacks. Navigation owns its own routing
+state and dependencies by the same boundary, without adapting data on behalf of child features.
+
+For each live observation, bind initial delivery, subscription lifetime, cancellation, and any
+existing identity-invalidation guarantees. Removing datasource observation macros alone is not a
+complete correction: trace data updates through the composed capability into consumer-owned state.
+Do not substitute a SwiftUI app-body read of a datasource property for that path. Feature state
+projects authoritative data; it must not become a second persistence cache or synchronization owner.
+
+Validate the first real scaffold consumer with inert injected dependencies, delivered data changes,
+and observation termination. Verify Environment assembly and consumer ownership as well as forbidden
+imports; clean package dependencies alone do not prove this runtime boundary.
 
 ## Target design
 

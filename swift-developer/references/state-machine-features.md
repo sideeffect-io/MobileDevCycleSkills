@@ -7,6 +7,7 @@
 - [Repository and installation](#repository-and-installation)
 - [Ground the API first](#ground-the-api-first)
 - [Mechanism admission](#mechanism-admission)
+- [Trace business rules before topology](#trace-business-rules-before-topology)
 - [Naming and visibility](#naming-and-visibility)
 - [Behavioral state and event design](#behavioral-state-and-event-design)
 - [Output cardinality and orchestration](#output-cardinality-and-orchestration)
@@ -89,6 +90,28 @@ modes and intents, outputs/capabilities, transition rules, output cardinality, r
 cancellation/correlation/recovery, semantic outcomes, and communication with other owners. Do not
 pre-enumerate every conceivable failure or internal function return as topology.
 
+## Trace business rules before topology
+
+For a new or redesigned machine, describe its accepted journey before enumerating types. For a
+local change, trace only affected routes and the invariants they depend on. Use a compact table or
+equivalent notes; existing clear DSL/tests may supply the trace without a new file or handoff field:
+
+| Current fact/state | Intent or semantic fact | Guard | Next fact/state | Output and result decision | Product rule or technical constraint |
+| --- | --- | --- | --- | --- | --- |
+| <known condition> | <why policy runs now> | <if required> | <changed fact, or unchanged> | <cohesive effect; zero/one/many events> | <rule ID, contract, or concrete evidence> |
+
+Every proposed state/event family, transition, and output must earn its place in this trace. A
+technical constraint qualifies when a concrete API, concurrency, transaction, privacy, or lifetime
+obligation changes legal inputs, effect selection, data guarantees, or required recovery. Naming an
+internal call completion as a new fact is not evidence. Keep such phases local to a cohesive output
+when the machine has no decision to make between them.
+
+Avoid state/event storms from multiplying operation phases, per-call successes/failures, retries,
+and unrelated flags. Reuse an intent with the same meaning; preserve distinct facts that change
+policy. Use ordinary payload data within one behavior, explicit states for different behavior, and
+never a mode dispatcher merely to hide alternatives. Counts trigger a necessity check, not quotas.
+When a constraint disappears, reassess its mechanism instead of preserving it through private tests.
+
 ## Naming and visibility
 
 - Concrete states: `<Owner>Is<PresentCondition>`.
@@ -107,6 +130,24 @@ helpers or a parallel representation.
 
 Every guarded route and value-dependent cancellation policy uses a named static predicate. Static
 functions keep policy readable and independently testable.
+
+## Stable four-file layout
+
+When a behavior-owning feature or navigation owner uses SwiftStateMachine, scaffold these four
+files under `StateMachine/`:
+
+- `States.swift`: every concrete state and its `SuperState` presentation projection;
+- `Events.swift`: every concrete event and the owner’s super-event marker;
+- `Outputs.swift`: every output definition, effect body, and output cancellation policy;
+- `StateMachine.swift`: the machine alias/factory, all `When`/`On`/`Transition` routes, and named
+  guards.
+
+Input, Outcome, and capability contracts may remain in a neighboring contract file. This is a
+discoverable organization rule for owners that actually use a machine, not a reason to add empty
+files or artificial machines to stateless features. Prefer an immutable struct projection when a
+SwiftUI view benefits from direct shared loading, failure, control, or form properties. Keep a
+semantic enum when it represents genuinely exclusive content or destinations with required payloads;
+do not wrap an enum mechanically while retaining the same switch tree.
 
 ## Behavioral state and event design
 
