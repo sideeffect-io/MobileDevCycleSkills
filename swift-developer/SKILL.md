@@ -79,39 +79,6 @@ properties directly. Keep a semantic enum when it represents genuinely exclusive
 destinations with required payloads; do not mechanically wrap an enum and retain the same switch
 tree.
 
-Machine factories must accept one owner-named `Outputs` value rather than raw capabilities. Model
-each semantic effect as a dedicated `Sendable` output struct initialized from the relevant
-capabilities. Its `callAsFunction` must return the side-effect function consumed by
-SwiftStateMachine: a `@Sendable` async function that yields `nil`, one semantic `Event`, or an
-`AsyncSequence` of semantic events. An output struct must never construct or return the
-SwiftStateMachine `Output` value itself. Keep that declaration visible in the machine DSL:
-
-```swift
-Transition(state: AuthenticationIsSigningInWithProvider(state))
-Output(sideEffect: outputs.signInWithProvider(event.provider))
-```
-
-Compose the owner's output structs into its `Outputs` value at the application or test composition
-boundary. This keeps capabilities out of route declarations while leaving effect execution,
-cancellation policy, and lifecycle policy explicit where the transition is read.
-
-Keep every transition sentence-readable: accepted event, optional named guard, destination state,
-and optional named output. Represent mutually exclusive alternatives as separate `On` declarations
-using named static `guard:` predicates; never choose a destination state or semantic output with an
-`if` or `switch` inside a transition closure. Construct the destination directly inside
-`Transition`, from `event.input`, the event, or the previous state. Do not introduce an intermediate
-`next` value merely to pass it to `Transition`. Add a focused state initializer when extraction,
-normalization, or field propagation would otherwise obscure the route. Conditional logic remains
-valid inside pure guards, state initializers, and output result mapping when it does not hide machine
-topology.
-
-Keep every `When` and `On` declaration directly inside the owner-named machine factory. Never move
-route groups into helper functions merely to reduce the factory's line count. If the complete
-transition table is no longer humanly readable, treat that as an ownership or decomposition signal:
-stop the affected implementation slice and route it to the Architect so the feature or navigation
-owner can be decomposed into cohesive child state machines coordinated by an explicit top-level
-owner. Do not disguise one oversized machine as several route-builder functions.
-
 ## Product-contract maintenance
 
 When accepted work adds, changes, or supersedes a durable product decision, update the repository's
