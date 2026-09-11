@@ -9,6 +9,8 @@
 - [Mechanism admission](#mechanism-admission)
 - [Trace business rules before topology](#trace-business-rules-before-topology)
 - [Naming and visibility](#naming-and-visibility)
+- [Stable four-file layout](#stable-four-file-layout)
+- [Readable machine declarations](#readable-machine-declarations)
 - [Behavioral state and event design](#behavioral-state-and-event-design)
 - [Output cardinality and orchestration](#output-cardinality-and-orchestration)
 - [Retry, correlation, cancellation, and observation](#retry-correlation-cancellation-and-observation)
@@ -148,6 +150,55 @@ files or artificial machines to stateless features. Prefer an immutable struct p
 SwiftUI view benefits from direct shared loading, failure, control, or form properties. Keep a
 semantic enum when it represents genuinely exclusive content or destinations with required payloads;
 do not wrap an enum mechanically while retaining the same switch tree.
+
+## Readable machine declarations
+
+A machine factory must receive one owner-named `Outputs` value rather than raw capabilities. The
+owner's `Outputs` value composes dedicated semantic output structs such as
+`SignInWithProviderOutput`. Each output struct is `Sendable`, receives the capabilities it needs at
+initialization, and owns the effect implementation and result-to-event mapping.
+
+An output struct's `callAsFunction` returns the side-effect function consumed by
+SwiftStateMachine; it does not construct or return the SwiftStateMachine `Output` DSL value. The
+returned function produces the cardinality required by the machine contract: no event (`nil`), one
+semantic event, or a `Sendable` stream of semantic events. Keep the `Output` declaration explicit
+beside the transition in the machine factory, for example:
+
+```swift
+Transition(state: AuthenticationIsSigningInWithProvider(state, event: event))
+Output(sideEffect: outputs.signInWithProvider(event.provider))
+```
+
+Compose the owner-level `Outputs` value at the application or test composition boundary from output
+structs that have already received their concrete capabilities. This keeps capabilities and effect
+implementation out of `StateMachine.swift` while making the selected semantic output immediately
+visible in the route declaration.
+
+Keep each route sentence-readable: accepted event, optional named guard, destination state, and
+optional named output. Construct the destination state directly inside `Transition`; do not create a
+temporary value whose only purpose is to be passed to `Transition`:
+
+```swift
+// Prefer
+Transition(state: AuthenticationIsDiscoveringEmail(state, event: event))
+
+// Avoid
+let next = AuthenticationIsDiscoveringEmail(state, event: event)
+Transition(state: next)
+```
+
+Represent mutually exclusive routes as separate `On` declarations with named static `guard:`
+predicates. Do not hide machine topology behind an `if` or `switch` inside a transition closure when
+separate declarative routes can express the alternatives. Conditional logic remains valid inside
+pure guards, focused state initializers, and output result mapping when it does not conceal topology.
+
+Keep the complete `When`/`On` transition table directly inside the owner-named machine factory. Do
+not extract route groups into helper functions merely to reduce the factory's line count. The
+factory should remain directly human-readable as the machine definition. If the complete machine is
+too large to remain readable in that form, treat it as an ownership/decomposition signal and route
+the design back to the Architect: prefer cohesive child state machines coordinated by an explicit
+top-level feature or navigation owner rather than several route-builder functions that disguise one
+oversized machine.
 
 ## Behavioral state and event design
 
