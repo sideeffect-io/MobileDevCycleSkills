@@ -79,6 +79,20 @@ properties directly. Keep a semantic enum when it represents genuinely exclusive
 destinations with required payloads; do not mechanically wrap an enum and retain the same switch
 tree.
 
+Machine factories must accept one owner-named `Outputs` value rather than raw capabilities. Model
+each semantic output as a dedicated `Sendable` struct initialized from the relevant capability
+bundle; give that struct a `callAsFunction` that creates the SwiftStateMachine `Output`. Compose the
+owner's output structs into its `Outputs` value at the application or test composition boundary.
+This keeps capabilities out of route declarations and makes effect dependencies explicit by name.
+
+Keep every transition sentence-readable: accepted event, optional named guard, destination state,
+and optional named output. Represent mutually exclusive alternatives as separate `On` declarations
+using named static `guard:` predicates; never choose a destination state or semantic output with an
+`if` or `switch` inside a transition closure. Construct the destination directly from `event.input`,
+the event, or the previous state. Add a focused state initializer when extraction, normalization, or
+field propagation would otherwise obscure the route. Conditional logic remains valid inside pure
+guards, state initializers, and output result mapping when it does not hide machine topology.
+
 ## Product-contract maintenance
 
 When accepted work adds, changes, or supersedes a durable product decision, update the repository's
