@@ -57,6 +57,50 @@ need, not CRUD categories. Apply DIP: dependencies point toward policy, while co
 stays outside. A capability bag is acceptable only when its members form one cohesive use case; it
 must not become a global service locator.
 
+## Function-valued clients and live factories
+
+For a bounded client or adapter seam, prefer a `Sendable` struct whose stored properties are
+`@Sendable` functions. The value describes what the consumer can do; it does not expose the concrete
+SDK runtime that performs the work. Tests construct the same value from deterministic closures rather
+than introducing a protocol solely to create a mock.
+
+```swift
+public struct DocumentClient: Sendable {
+  public let snapshots:
+    @Sendable (DocumentQuery) -> AsyncThrowingStream<DocumentSnapshot, any Error>
+  public let write: @Sendable ([DocumentWrite]) async throws -> Void
+}
+
+public func makeVendorDocumentClient(database: VendorDatabase) -> DocumentClient {
+  let runtime = VendorDocumentRuntime(database: database)
+  return DocumentClient(
+    snapshots: { runtime.snapshots(for: $0) },
+    write: { try await runtime.write($0) }
+  )
+}
+
+private actor VendorDocumentRuntime {
+  // Owns mutable SDK objects, listeners, cancellation, and replacement.
+}
+```
+
+Use a private actor behind the capability when the live adapter owns shared mutable state, listener
+registrations, replacement, cancellation, or serialized SDK lifecycle. A stateless thread-safe SDK
+operation can be captured directly without manufacturing an actor. The public factory is an action-
+named lower-camel-case function; the concrete runtime remains private unless a real consumer needs
+its identity or lifecycle API.
+
+Do not put an entire client or datasource on `@MainActor` merely because one operation presents UI.
+Split native presentation into a narrow main-actor capability and keep credential exchange,
+persistence, mapping, and other non-UI work in their own isolation domain. Cross the boundary with
+immutable `Sendable` values.
+
+A protocol remains appropriate when the abstraction is itself a stable type-level family: current
+implementations have substitutable semantic behavior, generic/associated-type composition is useful,
+reference identity is contractual, or framework conformance is required. “The unit test needs a
+fake” is not sufficient admission evidence when a closure or capability value expresses the same
+seam more directly.
+
 ## SOLID in Swift
 
 - **SRP:** Give each target/type/function one coherent responsibility and reason to change. Split by
@@ -75,7 +119,8 @@ must not become a global service locator.
 
 Functional/value design is the default. Add a protocol when it expresses a stable semantic contract
 with more than one useful implementation or enables necessary existential/generic composition. Do
-not add a protocol solely to mock one closure; inject the closure or capability directly.
+not add a protocol solely to mock one closure, a cohesive function-valued client, or a single live
+adapter; inject the closure or capability directly.
 
 Use a class for identity, shared ownership, framework interoperation, or reference lifecycle. Make
 it `final` unless external subclassing is a required API. Isolate shared mutable state with an actor

@@ -86,16 +86,46 @@ Imperative constructs are acceptable for UI event wiring and platform interop, b
 and local. Default to functional structure first, then add imperative layers only where API or lifecycle
 requirements require them.
 
+## Capability clients, factories, and protocols
+
+Use a capability struct with `@Sendable` closures for a small injected effect surface, including a
+bounded network, persistence, authentication, or system client. Give the value the consumer-facing
+operations and no concrete SDK identity:
+
+```swift
+public struct AuthenticationClient: Sendable {
+  public let signIn:
+    @Sendable (AuthenticationProvider) async throws -> AuthenticatedIdentity
+  public let resetPassword: @Sendable (String) async throws -> Void
+}
+```
+
+Build the production value with an action-named lower-camel-case factory such as
+`makeFirebaseAuthenticationClient(...)`. When the live implementation owns mutable SDK state,
+listener registrations, cancellation handles, replacement, or serialized lifecycle, let the factory
+close over a private actor. Keep that actor and vendor types out of the public seam. A stateless,
+thread-safe operation may be captured directly without an actor.
+
+Tests construct the same capability from closures or a small synchronized recorder. Do not add a
+protocol solely to create a mock, fake one method, or hide a single concrete implementation. A
+protocol is justified when multiple current implementations form a stable semantic family, generic
+or associated-type composition is useful, framework conformance is required, or reference identity
+and lifecycle are part of the contract.
+
+Do not put the whole capability on `@MainActor` when only one operation presents UI. Split that
+operation into a narrow main-actor presentation capability and keep network exchange, persistence,
+mapping, and domain work actor-neutral or owned by a dedicated actor. Preserve actor isolation as
+part of the function type only when it is a real semantic requirement.
+
 ## Protocol and reference decisions
 
-Use a capability struct with `@Sendable` closures for a small injected effect surface. Introduce a
-protocol when multiple implementations form a stable semantic family, generic constraints add
-value, or reference identity/lifecycle is part of the contract. Do not create one-method protocols
-solely for mocks.
+Functional/value design is the default. Prefer composition over inheritance. Use a class for
+identity, shared ownership, framework inheritance/interoperation, or lifecycle, and make it `final`
+by default. If a hierarchy or protocol is required, state and test substitutability, error,
+cancellation, ordering, and isolation guarantees.
 
-Use a class for identity, shared ownership, framework inheritance/interoperation, or lifecycle. Make
-it `final` by default. Prefer composition over inheritance. If a hierarchy is required, state and
-test substitutability, error, cancellation, and isolation guarantees.
+Do not expose a private runtime class or actor merely so tests can subclass or conform. Test through
+the public capability value and observable behavior.
 
 ## Readability and cleanliness
 
