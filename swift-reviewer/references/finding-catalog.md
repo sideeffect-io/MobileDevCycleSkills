@@ -95,6 +95,8 @@ Require the adapter to preserve every cancellation representation in its declare
 before applying the finite business-error fallback:
 
 ```swift
+import Foundation
+
 do {
   return .success(try await fetch())
 } catch is CancellationError {

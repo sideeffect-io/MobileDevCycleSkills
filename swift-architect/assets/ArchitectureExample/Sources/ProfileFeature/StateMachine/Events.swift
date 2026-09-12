@@ -11,10 +11,12 @@ struct ProfileInputWasReceived: Equatable, Event {
 
 struct ProfileLoadingWasRequested: Equatable, Event {
   typealias SuperEvent = ProfileEvent
+  let requestID: UUID
 }
 
 struct ProfileRetryWasRequested: Equatable, Event {
   typealias SuperEvent = ProfileEvent
+  let requestID: UUID
 }
 
 struct ProfileLoadingDidSucceed: Equatable, Event {

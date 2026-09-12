@@ -24,6 +24,58 @@ cleanup() {
 }
 trap cleanup EXIT
 
+python3 - "$example/Sources/ProfileFeature/StateMachine" <<'PY'
+import sys
+from pathlib import Path
+
+machine_dir = Path(sys.argv[1])
+required = {"States.swift", "Events.swift", "Outputs.swift", "StateMachine.swift"}
+actual = {path.name for path in machine_dir.glob("*.swift")}
+missing = required - actual
+legacy = {
+    "ProfileStates.swift",
+    "ProfileEvents.swift",
+    "ProfileOutputs.swift",
+    "ProfileStateMachine.swift",
+} & actual
+if missing or legacy:
+    raise SystemExit(
+        f"invalid StateMachine layout: missing={sorted(missing)}, legacy={sorted(legacy)}"
+    )
+
+outputs = (machine_dir / "Outputs.swift").read_text(encoding="utf-8")
+machine = (machine_dir / "StateMachine.swift").read_text(encoding="utf-8")
+required_output_fragments = {
+    "owner-named Outputs value": "public struct ProfileOutputs: Sendable",
+    "semantic output member": "let loadProfile: LoadProfileOutput",
+    "side-effect-returning callAsFunction": (
+        ") -> @Sendable () async -> (any Event<ProfileEvent>)?"
+    ),
+    "output cancellation policy": "enum ProfileCancellation",
+}
+for label, fragment in required_output_fragments.items():
+    if fragment not in outputs:
+        raise SystemExit(f"Outputs.swift is missing {label}: {fragment}")
+
+required_machine_fragments = {
+    "one Outputs factory argument": "outputs: ProfileOutputs",
+    "explicit output route": "sideEffect: outputs.loadProfile(",
+}
+for label, fragment in required_machine_fragments.items():
+    if fragment not in machine:
+        raise SystemExit(f"StateMachine.swift is missing {label}: {fragment}")
+if "ProfileStateMachineDependencies" in machine or "dependencies:" in machine:
+    raise SystemExit("StateMachine.swift must not receive a parallel dependency bag")
+profile_outputs = outputs.split("public struct ProfileOutputs", 1)[-1].split(
+    "enum ProfileCancellation", 1
+)[0]
+if "@Sendable" in profile_outputs:
+    raise SystemExit("ProfileOutputs must compose semantic outputs, not raw closure capabilities")
+if "enum ProfileCancellation" in machine:
+    raise SystemExit("output cancellation policy belongs in Outputs.swift")
+PY
+echo "Validated StateMachine layout and owner-Outputs contract."
+
 "$swift_bin" package --package-path "$example" dump-package | python3 -c '
 import json
 import sys
@@ -80,6 +132,7 @@ echo "Validated Frameworks/Datasources dependency graph."
 
 inventory="$scratch_path/inventory.json"
 python3 "$skill_dir/scripts/inventory_swiftpm.py" "$example" \
+  --swift-bin "$swift_bin" \
   --format json \
   --output "$inventory"
 python3 - "$inventory" <<'PY'

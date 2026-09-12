@@ -4,16 +4,18 @@
 
 ## Contents
 
-- Compiler-enforced boundaries
-- Scaffold readiness
-- Default layer responsibilities
-- Data observation and Environment injection
-- Frameworks and Datasources split
-- Target design
-- Access control and API surfaces
-- Import and dependency sanity
-- Resources, tests, and extensions
-- Validation
+- [Compiler-enforced boundaries](#compiler-enforced-boundaries)
+- [Scaffold readiness](#scaffold-readiness)
+- [Default layer responsibilities](#default-layer-responsibilities)
+- [Frameworks](#frameworks)
+- [Datasources](#datasources)
+- [Data observation and Environment injection](#data-observation-and-environment-injection)
+- [Target design](#target-design)
+- [Access control and API surfaces](#access-control-and-api-surfaces)
+- [Import and dependency sanity](#import-and-dependency-sanity)
+- [Third-party dependency policy](#third-party-dependency-policy)
+- [Resources, tests, and extensions](#resources-tests-and-extensions)
+- [Validation](#validation)
 
 ## Compiler-enforced boundaries
 
@@ -114,9 +116,10 @@ Datasources, a combined Infrastructure fallback, or top-level navigation vocabul
 states, events, outputs, and machine contain no
 concrete SDK, Frameworks, Datasources, DAO, live repository, or adapter implementation.
 
-The feature owns each output port as an `@Sendable` closure or cohesive `Sendable` capability struct.
-An output may orchestrate injected operations and translate success, finite failure, and cancellation
-into events; it does not construct or discover the concrete implementation that performs the work.
+The feature owns each effect port as an `@Sendable` closure or cohesive `Sendable` capability struct.
+A semantic output receives those ports, may orchestrate their operations, and translates success,
+finite failure, and cancellation into events. It does not construct or discover the concrete
+implementation that performs the work.
 
 ### Navigation
 
@@ -152,12 +155,12 @@ Expose domain values and explicit observation APIs (streams or cancellable subsc
 Internal mutable state for listeners, identity isolation, caching, or persistence remains owned by
 the datasource where required; this rule does not require stateless datasources or one-shot reads.
 
-The app composition root constructs Datasources, adapts their operations into feature-owned
-dependencies, and injects those dependencies through typed SwiftUI Environment values. When the
-feature uses SwiftStateMachine, assemble its effect dependencies into the factory and inject that
-factory directly. For a simpler feature, inject its narrow capabilities directly. Do not place a
-concrete datasource, SDK client, broad service container, or the composition root itself in the
-feature's Environment or public dependency contract.
+The app composition root constructs Datasources and adapts their operations into feature-owned
+ports. When the feature uses SwiftStateMachine, initialize its semantic output structs, compose them
+into one owner-named `Outputs` value, pass that value to the machine factory, and inject the factory
+directly. For a simpler feature, inject its narrow capabilities through typed SwiftUI Environment
+values. Do not place a concrete datasource, SDK client, broad service container, or the composition
+root itself in the feature's Environment or public dependency contract.
 
 The consuming feature root declares its Environment key with a deterministic, side-effect-free
 default, reads it through `@Environment`, and owns its presentation state. Use `@Entry` when supported

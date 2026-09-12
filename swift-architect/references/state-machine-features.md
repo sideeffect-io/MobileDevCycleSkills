@@ -9,6 +9,8 @@
 - [Mechanism admission](#mechanism-admission)
 - [Trace business rules before topology](#trace-business-rules-before-topology)
 - [Naming and visibility](#naming-and-visibility)
+- [Stable four-file layout](#stable-four-file-layout)
+- [Readable machine declarations](#readable-machine-declarations)
 - [Behavioral state and event design](#behavioral-state-and-event-design)
 - [Output cardinality and orchestration](#output-cardinality-and-orchestration)
 - [Retry, correlation, cancellation, and observation](#retry-correlation-cancellation-and-observation)
@@ -23,15 +25,35 @@ For SwiftPM, prefer an exact repository-approved revision unless the consumer al
 intentional version or branch policy:
 
 ```swift
-dependencies: [
-  .package(
-    url: "https://github.com/sideeffect-io/SwiftStateMachine",
-    revision: "<repository-approved-commit>"
-  )
-]
+// swift-tools-version: 6.0
 
-.product(name: "StateMachineCore", package: "SwiftStateMachine")
-.product(name: "StateMachineTest", package: "SwiftStateMachine")
+import PackageDescription
+
+let package = Package(
+  name: "FeaturePackage",
+  dependencies: [
+    .package(
+      url: "https://github.com/sideeffect-io/SwiftStateMachine",
+      revision: "<repository-approved-commit>"
+    )
+  ],
+  targets: [
+    .target(
+      name: "ProfileFeature",
+      dependencies: [
+        .product(name: "StateMachineCore", package: "SwiftStateMachine")
+      ]
+    ),
+    .testTarget(
+      name: "ProfileFeatureTests",
+      dependencies: [
+        "ProfileFeature",
+        .product(name: "StateMachineTest", package: "SwiftStateMachine")
+      ]
+    ),
+  ],
+  swiftLanguageModes: [.v6]
+)
 ```
 
 In Xcode, select the repository-approved dependency rule. Do not invent a semantic version or
@@ -81,9 +103,9 @@ Model the extended Mealy loop as:
 Output -> zero, one, or many semantic Events -> machine
 ```
 
-States and events are inert `Equatable & Sendable` values. Effects are named `Sendable`
-capabilities. The feature and machine never construct SDK clients, Framework wrappers,
-Datasources, DAOs, live repositories, or application services.
+States and events are inert `Equatable & Sendable` values. Effects are owner-named `Sendable`
+output structs built from injected capabilities. The feature and machine never construct SDK
+clients, Framework wrappers, Datasources, DAOs, live repositories, or application services.
 
 Before implementation, define the machine's owner, initial state/lifetime, accepted behavioral
 modes and intents, outputs/capabilities, transition rules, output cardinality, required
@@ -148,6 +170,52 @@ files or artificial machines to stateless features. Prefer an immutable struct p
 SwiftUI view benefits from direct shared loading, failure, control, or form properties. Keep a
 semantic enum when it represents genuinely exclusive content or destinations with required payloads;
 do not wrap an enum mechanically while retaining the same switch tree.
+
+## Readable machine declarations
+
+A machine factory must receive one owner-named `Outputs` value rather than raw capabilities or a
+parallel dependency bag. The owner's `Outputs` value composes dedicated semantic output structs
+such as `SignInWithProviderOutput`. Each output struct is `Sendable`, receives the capabilities it
+needs at initialization, and owns the effect implementation and result-to-event mapping.
+
+An output struct's `callAsFunction` returns the side-effect function consumed by
+SwiftStateMachine; it does not construct or return the SwiftStateMachine `Output` DSL value. The
+returned function produces the cardinality required by the machine contract: no event (`nil`), one
+semantic event, or a `Sendable` stream of semantic events. Keep the `Output` declaration explicit
+beside the transition in the machine factory, for example:
+
+```swift
+Transition(state: AuthenticationIsSigningInWithProvider(state, event: event))
+Output(sideEffect: outputs.signInWithProvider(event.provider))
+```
+
+Compose the owner-level `Outputs` value at the application or test composition boundary from output
+structs that have already received their concrete capabilities. This keeps capabilities and effect
+implementation out of `StateMachine.swift` while making the selected semantic output immediately
+visible in the route declaration.
+
+Keep each route sentence-readable: accepted event, optional named guard, destination state, and
+optional named output. Construct the destination state directly inside `Transition`; do not create a
+temporary value whose only purpose is to be passed to `Transition`:
+
+```swift
+// Prefer
+Transition(state: AuthenticationIsDiscoveringEmail(state, event: event))
+
+// Avoid
+let next = AuthenticationIsDiscoveringEmail(state, event: event)
+Transition(state: next)
+```
+
+Represent mutually exclusive routes as separate `On` declarations with named static `guard:`
+predicates. Do not hide machine topology behind an `if` or `switch` inside a transition closure when
+separate declarative routes can express the alternatives. Conditional logic remains valid inside
+pure guards, focused state initializers, and output result mapping when it does not conceal topology.
+
+Keep the complete `When`/`On` transition table directly inside the owner-named machine factory. Do
+not extract route groups into helper functions merely to reduce the factory's line count. If the
+complete machine is too large to remain readable, treat it as an ownership/decomposition signal:
+prefer cohesive child machines coordinated by an explicit top-level feature or navigation owner.
 
 ## Behavioral state and event design
 
@@ -285,18 +353,32 @@ Choose and document aggregate failure behavior: fail fast when one failure inval
 effect, or collect independent results when the business contract requires a combined outcome.
 Cancellation must propagate through the structured child tasks.
 
-For example, three independent cleanup capabilities may run concurrently and produce one aggregate
-machine event:
+For example, one semantic output can own three independent cleanup capabilities and return the
+side-effect function used by the route:
 
 ```swift
-let cleanupOutput = Output<AppState, AppEvent> {
-  async let widgetResult = clearWidgetData()
-  async let exportResult = clearTransientExports()
-  async let handoffResult = clearRouteHandoffs()
+// Outputs.swift
+struct CleanupOutput: Sendable {
+  let clearWidgetData: @Sendable () async -> CleanupResult
+  let clearTransientExports: @Sendable () async -> CleanupResult
+  let clearRouteHandoffs: @Sendable () async -> CleanupResult
 
-  let results = await (widgetResult, exportResult, handoffResult)
-  return CleanupDidFinish(summary: summarize(results))
+  func callAsFunction() -> @Sendable () async -> (any Event<AppEvent>)? {
+    { [clearWidgetData, clearTransientExports, clearRouteHandoffs] in
+      async let widget = clearWidgetData()
+      async let exports = clearTransientExports()
+      async let handoffs = clearRouteHandoffs()
+      return await CleanupDidFinish(widget: widget, exports: exports, handoffs: handoffs)
+    }
+  }
 }
+
+struct AppOutputs: Sendable {
+  let cleanup: CleanupOutput
+}
+
+// StateMachine.swift, inside the matching route
+Output(sideEffect: outputs.cleanup())
 ```
 
 The same internal execution could validly return `nil` when every result is fully handled and no
@@ -393,5 +475,5 @@ counts. When topology is simplified without changing behavior, update implementa
 and guardrails in the same focused change.
 
 Use the consumer revision's `StateMachineTest` APIs and external-public-API fixtures where
-visibility matters. The compiled example under `assets/ArchitectureExample` demonstrates one valid
-shape, not mandatory topology.
+visibility matters. Compile machine examples against the resolved revision; a role-local fixture is
+evidence only for the behavior it actually exercises, not mandatory topology.

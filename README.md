@@ -50,13 +50,13 @@ when a counterpart is unavailable.
 
 | Skill | Purpose |
 | --- | --- |
-| `mobile-specifier` | Refines a native mobile implementation request into one repository-grounded product specification before complexity classification. |
-| `swift-architect` | Designs and assesses Swift/iOS/macOS architecture and admitted mechanisms. |
-| `swift-developer` | Implements and validates settled Swift architecture. |
-| `swift-reviewer` | Independently assesses Swift changes, evidence, necessity, and readiness. |
-| `kotlin-architect` | Designs and assesses Kotlin/Android architecture and admitted mechanisms. |
-| `kotlin-developer` | Implements and validates settled Kotlin/Android architecture. |
-| `kotlin-reviewer` | Independently assesses Kotlin/Android changes, evidence, necessity, and readiness. |
+| [`mobile-specifier`](mobile-specifier/SKILL.md) | Refines a native mobile implementation request into one repository-grounded product specification before complexity classification. |
+| [`swift-architect`](swift-architect/SKILL.md) | Designs and assesses Swift/iOS/macOS architecture and admitted mechanisms. |
+| [`swift-developer`](swift-developer/SKILL.md) | Implements and validates settled Swift architecture. |
+| [`swift-reviewer`](swift-reviewer/SKILL.md) | Independently assesses Swift changes, evidence, necessity, and readiness. |
+| [`kotlin-architect`](kotlin-architect/SKILL.md) | Designs and assesses Kotlin/Android architecture and admitted mechanisms. |
+| [`kotlin-developer`](kotlin-developer/SKILL.md) | Implements and validates settled Kotlin/Android architecture. |
+| [`kotlin-reviewer`](kotlin-reviewer/SKILL.md) | Independently assesses Kotlin/Android changes, evidence, necessity, and readiness. |
 
 Load one lifecycle role skill at a time. Load only the references selected by that skill's resource
 routing table and only when the current task needs them. Specialist skills supplement the active
@@ -97,6 +97,14 @@ with a shared overlay whose unconditional loading would increase context for unr
 - After changing a skill, validate its internal links, examples/scripts when affected, synchronized
   role-local reference copies, and project sidecars that intentionally declare stricter local deltas.
 
+Validate the Swift role bundles statically with:
+
+```bash
+python3 scripts/validate_swift_skills.py
+```
+
+Add `--compile` to type-check the representative Swift snippets and build/test the Architect and
+Developer teaching fixtures in isolated scratch directories.
 
 ## Model adaptation and validation
 

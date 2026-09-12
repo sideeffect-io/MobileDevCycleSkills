@@ -12,21 +12,19 @@ public struct AppCompositionRoot: Sendable {
 
   public init(
     httpClient: HTTPDataClient,
-    profileBaseURL: URL,
-    generateID: @escaping @Sendable () -> UUID
+    profileBaseURL: URL
   ) {
     let profileDataSource = ProfileRemoteDataSource(
       httpClient: httpClient,
       baseURL: profileBaseURL
     )
-    let dependencies = ProfileStateMachineDependencies(
+    let outputs = ProfileOutputs(
       loadProfile: LoadProfileOutput { userID in
         await profileDataSource.load(userID: userID)
-      },
-      generateID: generateID
+      }
     )
     profileStateMachineFactory = ProfileStateMachineFactory(lifecycle: .instance) {
-      makeProfileStateMachine(dependencies: dependencies)
+      makeProfileStateMachine(outputs: outputs)
     }
   }
 }

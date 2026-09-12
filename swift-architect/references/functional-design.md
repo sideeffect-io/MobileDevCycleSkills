@@ -40,15 +40,17 @@ The app composition root connects ports to adapters. Domain and feature code do 
 database, or transport satisfies them. Convert implementation failures into finite domain/feature
 failures before they enter state or user-facing projections.
 
-Treat a state-machine output as feature-owned effect orchestration. Store only injected `@Sendable`
-closures or cohesive `Sendable` capability structs in the output/dependency value. The output may
-sequence those operations and map their domain-shaped success, failure, and cancellation into events;
-it must not import, initialize, locate, or retain a concrete Frameworks client, Datasource, DAO,
-repository implementation, SDK singleton, or app environment.
+Treat a state-machine output as feature-owned effect orchestration. Each semantic output struct
+stores only its injected `@Sendable` closures or cohesive `Sendable` capability values, and its
+`callAsFunction` returns the side-effect function. Compose those structs into the owner's single
+`Outputs` value passed to the machine factory. An output may sequence its operations and map their
+domain-shaped success, failure, and cancellation into events; it must not import, initialize,
+locate, or retain a concrete Frameworks client, Datasource, DAO, repository implementation, SDK
+singleton, or app environment.
 
 App composition builds the concrete path: construct generic low-level Frameworks wrappers, construct
 data-domain Datasources from them, then close over Datasource operations when creating the
-feature-owned output ports. This keeps policy pointing inward while concrete construction remains at
+feature-owned effect ports. This keeps policy pointing inward while concrete construction remains at
 the process boundary. Composition owns construction and lifetime; the output retains use-case
 sequencing, cancellation behavior, and result-to-event translation.
 
@@ -67,22 +69,50 @@ than introducing a protocol solely to create a mock.
 ```swift
 public struct DocumentClient: Sendable {
   public let snapshots:
-    @Sendable (DocumentQuery) -> AsyncThrowingStream<DocumentSnapshot, any Error>
+    @Sendable (DocumentQuery) async -> AsyncThrowingStream<DocumentSnapshot, any Error>
   public let write: @Sendable ([DocumentWrite]) async throws -> Void
+
+  public init(
+    snapshots: @escaping @Sendable (DocumentQuery) async -> AsyncThrowingStream<
+      DocumentSnapshot, any Error
+    >,
+    write: @escaping @Sendable ([DocumentWrite]) async throws -> Void
+  ) {
+    self.snapshots = snapshots
+    self.write = write
+  }
 }
 
 public func makeVendorDocumentClient(database: VendorDatabase) -> DocumentClient {
   let runtime = VendorDocumentRuntime(database: database)
   return DocumentClient(
-    snapshots: { runtime.snapshots(for: $0) },
+    snapshots: { await runtime.snapshots(for: $0) },
     write: { try await runtime.write($0) }
   )
 }
 
 private actor VendorDocumentRuntime {
-  // Owns mutable SDK objects, listeners, cancellation, and replacement.
+  private let database: VendorDatabase
+
+  init(database: VendorDatabase) {
+    self.database = database
+  }
+
+  func snapshots(
+    for query: DocumentQuery
+  ) -> AsyncThrowingStream<DocumentSnapshot, any Error> {
+    database.snapshots(for: query)
+  }
+
+  func write(_ writes: [DocumentWrite]) async throws {
+    try await database.write(writes)
+  }
 }
 ```
+
+Here `VendorDatabase` stands for an adapter whose `snapshots(for:)` and `write(_:)` operations are
+defined at the Framework boundary. Making `snapshots` async is required because the public closure
+crosses into the actor before it returns the stream.
 
 Use a private actor behind the capability when the live adapter owns shared mutable state, listener
 registrations, replacement, cancellation, or serialized SDK lifecycle. A stateless thread-safe SDK

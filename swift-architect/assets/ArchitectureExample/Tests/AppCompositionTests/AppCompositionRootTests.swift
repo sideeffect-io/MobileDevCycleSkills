@@ -12,8 +12,7 @@ func compositionBuildsTheFeatureFactoryFromFrameworksAndDatasources() {
   let httpClient = HTTPDataClient { _ in Data() }
   let compositionRoot = AppCompositionRoot(
     httpClient: httpClient,
-    profileBaseURL: URL(string: "https://example.invalid")!,
-    generateID: UUID.init
+    profileBaseURL: URL(string: "https://example.invalid")!
   )
 
   _ = compositionRoot.profileStateMachineFactory
@@ -32,15 +31,14 @@ func compositionWiresTheTransportIntoTheFeatureOutput() async {
   }
   let compositionRoot = AppCompositionRoot(
     httpClient: httpClient,
-    profileBaseURL: URL(string: "https://example.invalid")!,
-    generateID: UUID.init
+    profileBaseURL: URL(string: "https://example.invalid")!
   )
   let machine = await UIStateMachine(
     asyncStateMachineFactory: compositionRoot.profileStateMachineFactory
   )
 
   await machine.sendAndWait(ProfileInputWasReceived(input: .user(id: userID)))
-  await machine.sendAndWait(ProfileLoadingWasRequested())
+  await machine.sendAndWait(ProfileLoadingWasRequested(requestID: UUID()))
   let requestCount = await requests.count
 
   #expect(requestCount == 1)

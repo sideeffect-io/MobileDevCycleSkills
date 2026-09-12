@@ -25,15 +25,35 @@ For SwiftPM, prefer an exact repository-approved revision unless the consumer al
 intentional version or branch policy:
 
 ```swift
-dependencies: [
-  .package(
-    url: "https://github.com/sideeffect-io/SwiftStateMachine",
-    revision: "<repository-approved-commit>"
-  )
-]
+// swift-tools-version: 6.0
 
-.product(name: "StateMachineCore", package: "SwiftStateMachine")
-.product(name: "StateMachineTest", package: "SwiftStateMachine")
+import PackageDescription
+
+let package = Package(
+  name: "FeaturePackage",
+  dependencies: [
+    .package(
+      url: "https://github.com/sideeffect-io/SwiftStateMachine",
+      revision: "<repository-approved-commit>"
+    )
+  ],
+  targets: [
+    .target(
+      name: "ProfileFeature",
+      dependencies: [
+        .product(name: "StateMachineCore", package: "SwiftStateMachine")
+      ]
+    ),
+    .testTarget(
+      name: "ProfileFeatureTests",
+      dependencies: [
+        "ProfileFeature",
+        .product(name: "StateMachineTest", package: "SwiftStateMachine")
+      ]
+    ),
+  ],
+  swiftLanguageModes: [.v6]
+)
 ```
 
 In Xcode, select the repository-approved dependency rule. Do not invent a semantic version or
@@ -83,9 +103,9 @@ Model the extended Mealy loop as:
 Output -> zero, one, or many semantic Events -> machine
 ```
 
-States and events are inert `Equatable & Sendable` values. Effects are named `Sendable`
-capabilities. The feature and machine never construct SDK clients, Framework wrappers,
-Datasources, DAOs, live repositories, or application services.
+States and events are inert `Equatable & Sendable` values. Effects are owner-named `Sendable`
+output structs built from injected capabilities. The feature and machine never construct SDK
+clients, Framework wrappers, Datasources, DAOs, live repositories, or application services.
 
 Before implementation, define the machine's owner, initial state/lifetime, accepted behavioral
 modes and intents, outputs/capabilities, transition rules, output cardinality, required
@@ -153,10 +173,10 @@ do not wrap an enum mechanically while retaining the same switch tree.
 
 ## Readable machine declarations
 
-A machine factory must receive one owner-named `Outputs` value rather than raw capabilities. The
-owner's `Outputs` value composes dedicated semantic output structs such as
-`SignInWithProviderOutput`. Each output struct is `Sendable`, receives the capabilities it needs at
-initialization, and owns the effect implementation and result-to-event mapping.
+A machine factory must receive one owner-named `Outputs` value rather than raw capabilities or a
+parallel dependency bag. The owner's `Outputs` value composes dedicated semantic output structs
+such as `SignInWithProviderOutput`. Each output struct is `Sendable`, receives the capabilities it
+needs at initialization, and owns the effect implementation and result-to-event mapping.
 
 An output struct's `callAsFunction` returns the side-effect function consumed by
 SwiftStateMachine; it does not construct or return the SwiftStateMachine `Output` DSL value. The
@@ -193,12 +213,9 @@ separate declarative routes can express the alternatives. Conditional logic rema
 pure guards, focused state initializers, and output result mapping when it does not conceal topology.
 
 Keep the complete `When`/`On` transition table directly inside the owner-named machine factory. Do
-not extract route groups into helper functions merely to reduce the factory's line count. The
-factory should remain directly human-readable as the machine definition. If the complete machine is
-too large to remain readable in that form, treat it as an ownership/decomposition signal and route
-the design back to the Architect: prefer cohesive child state machines coordinated by an explicit
-top-level feature or navigation owner rather than several route-builder functions that disguise one
-oversized machine.
+not extract route groups into helper functions merely to reduce the factory's line count. If the
+complete machine is too large to remain readable, treat it as an ownership/decomposition signal:
+prefer cohesive child machines coordinated by an explicit top-level feature or navigation owner.
 
 ## Behavioral state and event design
 
@@ -336,18 +353,32 @@ Choose and document aggregate failure behavior: fail fast when one failure inval
 effect, or collect independent results when the business contract requires a combined outcome.
 Cancellation must propagate through the structured child tasks.
 
-For example, three independent cleanup capabilities may run concurrently and produce one aggregate
-machine event:
+For example, one semantic output can own three independent cleanup capabilities and return the
+side-effect function used by the route:
 
 ```swift
-let cleanupOutput = Output<AppState, AppEvent> {
-  async let widgetResult = clearWidgetData()
-  async let exportResult = clearTransientExports()
-  async let handoffResult = clearRouteHandoffs()
+// Outputs.swift
+struct CleanupOutput: Sendable {
+  let clearWidgetData: @Sendable () async -> CleanupResult
+  let clearTransientExports: @Sendable () async -> CleanupResult
+  let clearRouteHandoffs: @Sendable () async -> CleanupResult
 
-  let results = await (widgetResult, exportResult, handoffResult)
-  return CleanupDidFinish(summary: summarize(results))
+  func callAsFunction() -> @Sendable () async -> (any Event<AppEvent>)? {
+    { [clearWidgetData, clearTransientExports, clearRouteHandoffs] in
+      async let widget = clearWidgetData()
+      async let exports = clearTransientExports()
+      async let handoffs = clearRouteHandoffs()
+      return await CleanupDidFinish(widget: widget, exports: exports, handoffs: handoffs)
+    }
+  }
 }
+
+struct AppOutputs: Sendable {
+  let cleanup: CleanupOutput
+}
+
+// StateMachine.swift, inside the matching route
+Output(sideEffect: outputs.cleanup())
 ```
 
 The same internal execution could validly return `nil` when every result is fully handled and no
@@ -444,5 +475,5 @@ counts. When topology is simplified without changing behavior, update implementa
 and guardrails in the same focused change.
 
 Use the consumer revision's `StateMachineTest` APIs and external-public-API fixtures where
-visibility matters. The compiled example under `assets/ArchitectureExample` demonstrates one valid
-shape, not mandatory topology.
+visibility matters. Compile machine examples against the resolved revision; a role-local fixture is
+evidence only for the behavior it actually exercises, not mandatory topology.

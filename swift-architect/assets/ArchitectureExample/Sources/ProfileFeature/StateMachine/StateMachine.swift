@@ -5,9 +5,7 @@ public typealias ProfileStateMachineFactory = AsyncStateMachineFactory<
   ProfileViewState, ProfileEvent
 >
 
-public func makeProfileStateMachine(
-  dependencies: ProfileStateMachineDependencies
-) -> ProfileStateMachine {
+public func makeProfileStateMachine(outputs: ProfileOutputs) -> ProfileStateMachine {
   AsyncStateMachine(initial: ProfileIsAwaitingInput()) {
     When(state: ProfileIsAwaitingInput.self) {
       On(event: ProfileInputWasReceived.self) { _, event in
@@ -20,16 +18,13 @@ public func makeProfileStateMachine(
         Transition(state: ProfileIsIdle(input: event.input))
       }
 
-      On(event: ProfileLoadingWasRequested.self) { state, _ in
-        let requestID = dependencies.generateID()
-        Transition(state: ProfileIsLoading(input: state.input, requestID: requestID))
+      On(event: ProfileLoadingWasRequested.self) { state, event in
+        Transition(state: ProfileIsLoading(input: state.input, requestID: event.requestID))
         Output(
-          sideEffect: {
-            await dependencies.loadProfile(
-              userID: state.input.userID,
-              requestID: requestID
-            )
-          },
+          sideEffect: outputs.loadProfile(
+            userID: state.input.userID,
+            requestID: event.requestID
+          ),
           cancellationPolicy: Cancel(predicate: ProfileCancellation.shouldCancelLoad)
         )
       }
@@ -40,16 +35,13 @@ public func makeProfileStateMachine(
         Transition(state: ProfileIsIdle(input: event.input))
       }
 
-      On(event: ProfileLoadingWasRequested.self) { state, _ in
-        let requestID = dependencies.generateID()
-        Transition(state: ProfileIsLoading(input: state.input, requestID: requestID))
+      On(event: ProfileLoadingWasRequested.self) { state, event in
+        Transition(state: ProfileIsLoading(input: state.input, requestID: event.requestID))
         Output(
-          sideEffect: {
-            await dependencies.loadProfile(
-              userID: state.input.userID,
-              requestID: requestID
-            )
-          },
+          sideEffect: outputs.loadProfile(
+            userID: state.input.userID,
+            requestID: event.requestID
+          ),
           cancellationPolicy: Cancel(predicate: ProfileCancellation.shouldCancelLoad)
         )
       }
@@ -61,7 +53,7 @@ public func makeProfileStateMachine(
             input: state.input,
             profile: event.profile,
             pendingOutcome: ProfileOutcomeDelivery(
-              id: dependencies.generateID(),
+              id: state.requestID,
               outcome: .profileDidLoad(id: state.input.userID)
             )
           )
@@ -78,16 +70,13 @@ public func makeProfileStateMachine(
         Transition(state: ProfileIsIdle(input: event.input))
       }
 
-      On(event: ProfileLoadingWasRequested.self) { state, _ in
-        let requestID = dependencies.generateID()
-        Transition(state: ProfileIsLoading(input: state.input, requestID: requestID))
+      On(event: ProfileLoadingWasRequested.self) { state, event in
+        Transition(state: ProfileIsLoading(input: state.input, requestID: event.requestID))
         Output(
-          sideEffect: {
-            await dependencies.loadProfile(
-              userID: state.input.userID,
-              requestID: requestID
-            )
-          },
+          sideEffect: outputs.loadProfile(
+            userID: state.input.userID,
+            requestID: event.requestID
+          ),
           cancellationPolicy: Cancel(predicate: ProfileCancellation.shouldCancelLoad)
         )
       }
@@ -108,16 +97,13 @@ public func makeProfileStateMachine(
         Transition(state: ProfileIsIdle(input: event.input))
       }
 
-      On(event: ProfileRetryWasRequested.self) { state, _ in
-        let requestID = dependencies.generateID()
-        Transition(state: ProfileIsLoading(input: state.input, requestID: requestID))
+      On(event: ProfileRetryWasRequested.self) { state, event in
+        Transition(state: ProfileIsLoading(input: state.input, requestID: event.requestID))
         Output(
-          sideEffect: {
-            await dependencies.loadProfile(
-              userID: state.input.userID,
-              requestID: requestID
-            )
-          },
+          sideEffect: outputs.loadProfile(
+            userID: state.input.userID,
+            requestID: event.requestID
+          ),
           cancellationPolicy: Cancel(predicate: ProfileCancellation.shouldCancelLoad)
         )
       }
@@ -145,16 +131,5 @@ enum ProfileGuard {
     _ event: ProfileOutcomeWasConsumed
   ) -> Bool {
     state.pendingOutcome?.id == event.deliveryID
-  }
-}
-
-enum ProfileCancellation {
-  static func shouldCancelLoad(
-    _: any State<ProfileViewState>,
-    _ event: any Event<ProfileEvent>,
-    _: (any State<ProfileViewState>)?
-  ) -> Bool {
-    event is ProfileInputWasReceived
-      || event is ProfileLoadingWasRequested
   }
 }

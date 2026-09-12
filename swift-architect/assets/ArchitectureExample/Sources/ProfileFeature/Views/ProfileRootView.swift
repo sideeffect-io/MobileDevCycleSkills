@@ -21,8 +21,8 @@ public struct ProfileRootView: View {
     StateMachineView(factory: stateMachineFactory) { machine in
       ProfileContentView(
         state: machine.state,
-        load: { machine.send(ProfileLoadingWasRequested()) },
-        retry: { machine.send(ProfileRetryWasRequested()) }
+        load: { machine.send(ProfileLoadingWasRequested(requestID: UUID())) },
+        retry: { machine.send(ProfileRetryWasRequested(requestID: UUID())) }
       )
       .onChange(of: input, initial: true) { _, input in
         machine.send(ProfileInputWasReceived(input: input))

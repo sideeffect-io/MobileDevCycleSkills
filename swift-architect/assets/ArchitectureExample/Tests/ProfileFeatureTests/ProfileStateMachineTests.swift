@@ -12,9 +12,8 @@ func profileLoadJourneyProducesASemanticOutcome() async {
   let generatedID = UUID()
   let profile = Profile(id: userID, displayName: "Taylor")
   let machine = makeProfileStateMachine(
-    dependencies: ProfileStateMachineDependencies(
-      loadProfile: LoadProfileOutput { _ in .success(profile) },
-      generateID: { generatedID }
+    outputs: ProfileOutputs(
+      loadProfile: LoadProfileOutput { _ in .success(profile) }
     )
   )
 
@@ -25,7 +24,7 @@ func profileLoadJourneyProducesASemanticOutcome() async {
     await assertions.assert(state: ProfileIsAwaitingInput())
     assertions.send(event: ProfileInputWasReceived(input: .user(id: userID)))
     await assertions.assert(state: ProfileIsIdle(input: .user(id: userID)))
-    assertions.send(event: ProfileLoadingWasRequested())
+    assertions.send(event: ProfileLoadingWasRequested(requestID: generatedID))
     await assertions.assert(
       state: ProfileIsLoading(input: .user(id: userID), requestID: generatedID)
     )
@@ -51,9 +50,8 @@ func staleSuccessCannotReplaceTheCurrentRequest() async {
     profile: Profile(id: userID, displayName: "Stale")
   )
   let machine = makeProfileStateMachine(
-    dependencies: ProfileStateMachineDependencies(
-      loadProfile: LoadProfileOutput { _ in .cancelled },
-      generateID: UUID.init
+    outputs: ProfileOutputs(
+      loadProfile: LoadProfileOutput { _ in .cancelled }
     )
   )
 
@@ -69,9 +67,8 @@ func profileLoadFailureEntersAFiniteFailureState() async {
   let userID = UserID(rawValue: UUID())
   let requestID = UUID()
   let machine = makeProfileStateMachine(
-    dependencies: ProfileStateMachineDependencies(
-      loadProfile: LoadProfileOutput { _ in .failure(.unavailable) },
-      generateID: { requestID }
+    outputs: ProfileOutputs(
+      loadProfile: LoadProfileOutput { _ in .failure(.unavailable) }
     )
   )
 
@@ -82,7 +79,7 @@ func profileLoadFailureEntersAFiniteFailureState() async {
     await assertions.assert(state: ProfileIsAwaitingInput())
     assertions.send(event: ProfileInputWasReceived(input: .user(id: userID)))
     await assertions.assert(state: ProfileIsIdle(input: .user(id: userID)))
-    assertions.send(event: ProfileLoadingWasRequested())
+    assertions.send(event: ProfileLoadingWasRequested(requestID: requestID))
     await assertions.assert(
       state: ProfileIsLoading(input: .user(id: userID), requestID: requestID)
     )
@@ -106,9 +103,8 @@ func consumingTheCurrentOutcomeClearsItsDelivery() async {
     )
   )
   let machine = makeProfileStateMachine(
-    dependencies: ProfileStateMachineDependencies(
-      loadProfile: LoadProfileOutput { _ in .cancelled },
-      generateID: UUID.init
+    outputs: ProfileOutputs(
+      loadProfile: LoadProfileOutput { _ in .cancelled }
     )
   )
 
@@ -131,7 +127,7 @@ func retryDoesNotCancelAnInFlightLoadWithoutAReplacementTransition() {
 
   let shouldCancel = ProfileCancellation.shouldCancelLoad(
     state,
-    ProfileRetryWasRequested(),
+    ProfileRetryWasRequested(requestID: UUID()),
     nil
   )
 

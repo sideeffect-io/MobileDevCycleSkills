@@ -4,11 +4,12 @@
 
 ## Contents
 
-- Evidence inventory
-- Shared quality dimensions
-- Evidence levels and hard gates
-- Complexity review triggers
-- Convergence loop
+- [Evidence inventory](#evidence-inventory)
+- [Shared quality dimensions](#shared-quality-dimensions)
+- [Evidence levels and caps](#evidence-levels-and-caps)
+- [Hard gates](#hard-gates)
+- [Complexity review triggers](#complexity-review-triggers)
+- [Convergence loop](#convergence-loop)
 
 Use this reference for architecture assessment and convergence: scope, evidence, necessity, and applicable gates.
 Use numeric scoring only when requested by the user or repository; a design-only task need not

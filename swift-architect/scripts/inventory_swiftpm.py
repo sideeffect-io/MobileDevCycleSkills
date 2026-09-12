@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
-
 
 SKIPPED_DIRECTORIES = {
     ".agents",
@@ -30,7 +30,10 @@ SKIPPED_DIRECTORIES = {
     "Carthage",
 }
 IMPORT_PATTERN = re.compile(
-    r"^\s*(?:(?:@testable|@_exported|@_implementationOnly)\s+)?import\s+([A-Za-z_]\w*)",
+    r"^\s*(?:@[A-Za-z_]\w*(?:\([^\n)]*\))?\s+)*"
+    r"(?:(?:private|fileprivate|internal|package|public)\s+)?"
+    r"import\s+(?:(?:typealias|struct|class|enum|protocol|let|var|func)\s+)?"
+    r"([A-Za-z_]\w*)",
     re.MULTILINE,
 )
 PUBLIC_PATTERN = re.compile(
@@ -55,6 +58,11 @@ def parse_args() -> argparse.Namespace:
         default="markdown",
         help="Output format.",
     )
+    parser.add_argument(
+        "--swift-bin",
+        default=os.environ.get("SWIFT_BIN", "swift"),
+        help="Swift executable used for dump-package (default: SWIFT_BIN or swift).",
+    )
     parser.add_argument("--output", help="Optional output path; stdout is the default.")
     return parser.parse_args()
 
@@ -74,9 +82,9 @@ def find_manifests(root: Path) -> list[Path]:
     return sorted(set(manifests))
 
 
-def dump_package(package_path: Path) -> dict[str, Any]:
+def dump_package(package_path: Path, swift_bin: str) -> dict[str, Any]:
     result = subprocess.run(
-        ["swift", "package", "--package-path", str(package_path), "dump-package"],
+        [swift_bin, "package", "--package-path", str(package_path), "dump-package"],
         check=False,
         capture_output=True,
         text=True,
@@ -147,9 +155,9 @@ def inspect_target(package_path: Path, target: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def inventory(manifest: Path) -> dict[str, Any]:
+def inventory(manifest: Path, swift_bin: str) -> dict[str, Any]:
     package_path = manifest.parent
-    dumped = dump_package(package_path)
+    dumped = dump_package(package_path, swift_bin)
     return {
         "name": dumped.get("name", package_path.name),
         "path": str(package_path),
@@ -158,7 +166,9 @@ def inventory(manifest: Path) -> dict[str, Any]:
             f"{item.get('platformName')} {item.get('version')}"
             for item in dumped.get("platforms", [])
         ],
-        "targets": [inspect_target(package_path, target) for target in dumped.get("targets", [])],
+        "targets": [
+            inspect_target(package_path, target) for target in dumped.get("targets", [])
+        ],
     }
 
 
@@ -203,7 +213,7 @@ def main() -> int:
         manifests = find_manifests(Path(args.root).expanduser().resolve())
         if not manifests:
             raise ValueError(f"No Package.swift found under {args.root}")
-        packages = [inventory(manifest) for manifest in manifests]
+        packages = [inventory(manifest, args.swift_bin) for manifest in manifests]
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

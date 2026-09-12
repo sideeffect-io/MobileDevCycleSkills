@@ -4,9 +4,9 @@
 
 ## Contents
 
-- Evidence order
-- Review passes
-- Reporting discipline
+- [Evidence order](#evidence-order)
+- [Review passes](#review-passes)
+- [Reporting discipline](#reporting-discipline)
 
 ## Evidence order
 
@@ -44,6 +44,12 @@ ownership, Feature/Navigation separation, app composition, public API minimality
 ownership, resources, and target-local tests. If a combined Infrastructure fallback exists, verify
 that its cohesive/legacy rationale is explicit and that it preserves the same forbidden edges.
 Confirm a compiler boundary exists where the architecture contract claims one.
+
+For a SwiftStateMachine owner, verify the stable `StateMachine/States.swift`, `Events.swift`,
+`Outputs.swift`, and `StateMachine.swift` layout. The machine factory receives one owner-named
+`Outputs` value, not raw capabilities or a parallel dependency bag. Each semantic output is a
+`Sendable` struct whose `callAsFunction` returns the side-effect function; the route declares
+`Output(sideEffect: outputs.operation(...))` explicitly beside its transition.
 
 ### Functional design and readability
 

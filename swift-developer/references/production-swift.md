@@ -37,54 +37,16 @@ Use `Optional` only for absence. Use a finite error type or `Result` when caller
 Do not expose transport errors, arbitrary strings, or sentinel values as domain failure. Preserve
 `CancellationError`/cancellation separately from business failure.
 
-## State-machine implementation with SwiftStateMachine
+## SwiftStateMachine workflows
 
-Use SwiftStateMachine for significant business features, navigation workflows, and flows with
-legal state constraints, async effects, retry/recovery, or cancellation requirements.
-When a workflow is simple presentation/state reflection, use plain SwiftUI state instead.
-
-Treat each workflow as a compact state transition contract:
-
-- Define concrete, `Equatable & Sendable` value states and events.
-- Keep machine definitions deterministic and side-effect free.
-- Place all async work in outputs/capabilities passed through composition.
-- Represent outcomes explicitly and feed them back into the machine as events.
-
-A minimal implementation sequence is:
-
-1. Define one owner-authored state graph with initial state, terminal states, legal transitions, and
-   outputs/events in that feature owner.
-2. Build the machine in the owner with an `AsyncStateMachineFactory` (or equivalent DSL for the
-   pinned revision), owned as process-local immutable environment.
-3. Inject concrete work as closure-based capabilities (API clients, repositories, location, storage),
-   never create concrete infra objects inside machine declarations.
-4. Mount `StateMachineView`/`UIStateMachine` at the feature root and pass only projection + callback
-   contracts to children.
-
-Map every async result to a single explicit event and require cancellation, stale-result, and retry
-behaviors in tests. Use named guards/cancellation predicates for any branch where ordering or idempotency
-matters.
-
-For exact type names, repository-owned DSL shape, and tests, read the pinned SwiftStateMachine revision in
-the live checkout first, then apply this doc as the workflow template.
-For detailed machine topology and contract examples, follow the design reference in
-[SwiftStateMachine Feature Design](state-machine-features.md).
-
-## Functional programming as default paradigm
-
-Functional programming is the default style for Swift implementation in this skill scope. Prefer pure,
-explicit transformations and explicit effect boundaries over object-oriented mutation.
-
-- Represent domain behavior as pure functions from inputs to outputs where possible.
-- Make impossible states unrepresentable through types and finite enums.
-- Keep state immutable by default; expose explicit mutating transitions at feature boundaries.
-- Isolate side effects in small injected capabilities owned by composition, not in feature core types.
-- Prefer `map`/`filter`/`reduce` pipelines to hand-rolled loops for deterministic logic.
-- Use output/effect orchestration to model async behavior; avoid ad-hoc callback sprawl.
-
-Imperative constructs are acceptable for UI event wiring and platform interop, but they must remain shallow
-and local. Default to functional structure first, then add imperative layers only where API or lifecycle
-requirements require them.
+A significant feature name alone does not justify a state machine. When accepted behavior requires
+state-dependent legality, replaceable or long-lived effects, cancellation, correlation, retry,
+recovery, or navigation lifetime, use the focused
+[SwiftStateMachine feature design](state-machine-features.md) as the sole topology and output
+contract. In particular, the factory receives one owner-named `Outputs` value, and each effect
+output's `callAsFunction` returns the side-effect function consumed by the DSL. Prefer pure
+functions, local SwiftUI state, structured async work, or a small coordinator when those fully
+express the behavior.
 
 ## Capability clients, factories, and protocols
 
@@ -97,6 +59,14 @@ public struct AuthenticationClient: Sendable {
   public let signIn:
     @Sendable (AuthenticationProvider) async throws -> AuthenticatedIdentity
   public let resetPassword: @Sendable (String) async throws -> Void
+
+  public init(
+    signIn: @escaping @Sendable (AuthenticationProvider) async throws -> AuthenticatedIdentity,
+    resetPassword: @escaping @Sendable (String) async throws -> Void
+  ) {
+    self.signIn = signIn
+    self.resetPassword = resetPassword
+  }
 }
 ```
 
