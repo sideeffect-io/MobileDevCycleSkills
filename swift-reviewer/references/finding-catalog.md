@@ -55,10 +55,26 @@ by scoped evidence and concrete impact.
 
 - force unwrap/`try!` without a proved invariant;
 - boolean mode parameter, excessive argument train, broad dependency bag;
-- protocol/mock abstraction with no real variation; non-final reference type without subclass contract;
-- blanket `@MainActor`, unowned unstructured task, unjustified `Task.detached`;
+- protocol/mock abstraction with no real variation when a closure or cohesive function-valued
+  capability struct expresses the seam directly;
+- public client protocol mirrors one concrete SDK adapter only to create test doubles;
+- non-final reference type without subclass contract;
+- blanket `@MainActor` on a persistence, networking, mapping, cache, SDK-listener, or workflow
+  subsystem that has no UI ownership invariant;
+- protocol-wide or type-wide global-actor annotation unnecessarily propagates UI isolation into
+  conformers, capabilities, callers, and tests;
+- mixed-isolation client keeps native presentation and non-UI exchange/persistence under one
+  `@MainActor` abstraction instead of splitting the narrow presentation seam;
+- `Task {}` is presented as background execution even though it inherits the surrounding actor;
+- synchronous `nonisolated` helper is presented as offloading even though the caller executor still
+  performs the work;
+- callback delivery is forced onto `.main`, or `MainActor.assumeIsolated` is used, merely to make a
+  non-UI adapter compile rather than bridging into its own actor/continuation;
+- unowned unstructured task or unjustified `Task.detached`;
 - `@unchecked Sendable`, `nonisolated(unsafe)`, or `@preconcurrency` without safety proof;
-- actor state used after `await` without revalidation;
+- actor state or identity assumption used after `await` without revalidation;
+- security/identity/logout/prerequisite stream uses coalescing that can erase an intermediate
+  transition required by an invariant;
 - continuation can resume zero/multiple times; stream lacks termination/buffer policy;
 - blocking wait in async code, lost cancellation, competing iterator on unicast sequence.
 
@@ -100,6 +116,18 @@ including Foundation bridging where applicable, the incorrect user/workflow impa
 mapping correction, and a regression test that exercises that representation. Do not prescribe a URL
 loading cancellation check when the selected transport cannot emit it.
 
+### Representative finding: main actor used as subsystem lock
+
+A type-wide `@MainActor` may make Swift 6 diagnostics disappear while forcing synchronous JSON,
+projection reconstruction, cache bookkeeping, or SDK callback processing onto the UI executor. The
+finding must identify concrete synchronous work on that isolation domain; do not claim that an
+awaited network suspension itself blocks the main actor.
+
+Require the smallest semantic correction: keep UI/native presentation on `@MainActor`, move mutable
+non-UI ownership to a dedicated actor or synchronized state cell, and cross the boundary with
+`Sendable` values or streams. Recheck every suspension point for stale identity/generation before
+accepting a result. A green strict-concurrency build proves race checking, not responsiveness.
+
 ## System surfaces
 
 - an App Intent mirrors screens, navigation, or the persistence graph instead of one user-valued action;
@@ -137,6 +165,10 @@ loading cancellation check when the selected transport cannot emit it.
 - `#expect` hides a required prerequisite, `.serialized` masks fixable shared state, a known failure is
   disabled instead of tracked with `withKnownIssue`, or availability/filtering hides a suite;
 - implementation-shaped mocks make refactor impossible without behavior value;
+- tests conform fake classes to a production protocol that exists only for mockability instead of
+  constructing the public capability value from deterministic closures;
+- concurrency tests run the entire non-UI subsystem on `@MainActor`, masking accidental isolation
+  propagation and actor-boundary defects;
 - guardrail uses fragile whitespace/regex where AST/manifest structure is required;
 - style-only guardrail costs more to maintain than the correctness or boundary risk it protects;
 - validation claim omits command/destination/result or treats unrelated failure as success;
