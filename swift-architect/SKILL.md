@@ -17,19 +17,27 @@ stricter project constraints. This skill owns reusable Swift architecture doctri
 
 ## Operating contract
 
-1. Read applicable `AGENTS.md`, repository guidance, product rules, and any current lifecycle
-   handoff.
-2. Inspect the branch, dirty worktree, scoped diff, manifests, resolved dependencies, imports,
-   public symbols, composition roots, tests, consumers, and guardrails. Preserve unrelated work.
-3. Treat compiled APIs, manifests, source, and tests as implementation truth. Preserve behavior
-   unless the accepted request changes it.
-4. Resolve ownership, dependency direction, public seams, workflow behavior, delivery order, risks,
-   and validation before binding implementation.
-5. Ask only when an undiscoverable answer would materially change product behavior, scope,
-   authority, or irreversible consequences. User direction overrides this skill's defaults.
+1. Read applicable repository instructions, product rules, and the current handoff. Inspect branch,
+   dirty diff, manifests, dependencies, owners, composition, consumers, tests, and guardrails;
+   preserve unrelated work.
+2. Treat compiled APIs, manifests, source, and tests as truth. Resolve ownership, dependency
+   direction, seams, workflow, delivery order, risk, and proof before binding implementation.
+3. Ask only when an undiscoverable answer materially changes behavior, scope, authority, or an
+   irreversible consequence. User direction overrides defaults.
 
-Read `must`, `never`, and `required` as contracts; `prefer` is the default unless evidence supports
-another valid choice. Load only task-relevant references and sections.
+Read `must`, `never`, and `required` as contracts; `prefer` is the default. Load this entrypoint and
+at most three role-local references initially; record the unresolved risk before loading a fourth.
+
+## Execution discipline
+
+Build one compact task execution map before proposing topology: outcomes/rule IDs, baseline,
+owners/paths, risks/proof, and prerequisites. It indexes authoritative guidance. Batch bounded
+owner/path queries, reuse verified facts until drift, and surface unavailable authority, device,
+entitlement, or live-service proof before binding a design.
+
+For a settled-owner defect, do not manufacture an Architect stage. Reproduce and trace the smallest
+owner/lifetime path first; propose topology only when evidence shows current ownership is insufficient.
+Hand Developer a compact checkpoint instead of replaying the investigation.
 
 ## Lean architecture contract
 
@@ -63,39 +71,31 @@ modules, APIs, state topology, DI, retries, or tests unless the user makes a mec
 | SwiftPM graph, layers, visibility, resources, observation, composition | [Architecture layers](references/architecture-layers.md) |
 | Functional core, ports/adapters, protocols, capability clients | [Functional and hexagonal design](references/functional-design.md) |
 | Feature/Navigation workflows or SwiftStateMachine | [State-machine feature design](references/state-machine-features.md) |
+| Async identity, retry, correlation, replacement, stale results | [State-machine interleavings](references/state-machine-interleavings.md) |
 | Behavior-preserving structural migration | [Migration playbook](references/migration-playbook.md) |
 | Compiler, Apple products, App Intents, runtime/security proof | [Toolchain and platform planning](references/toolchain-and-platform-validation.md) |
 | Architecture audit, metrics, gates, convergence | [Assessment and convergence](references/assessment-and-convergence.md) |
 | Lifecycle transition without a complete local contract | [Swift handoff contract](references/handoff-contract.md) |
 
 Use manifest dumps and source inspection for SwiftPM inventory. `assets/ArchitectureExample` is a
-compiled teaching fixture, never repository truth. When a material uncertainty remains, load the
-matching installed specialization in the current agent: `swift-concurrency` for isolation,
-`swiftui-expert` or `mobile-ios-design` for UI ownership/interaction, the App Intents skill for
-system surfaces, or the debugger/performance skills for runtime evidence. Specialists increase
-certainty; do not spawn or switch roles for specialization. If required evidence is otherwise
+compiled teaching fixture, never repository truth. Role-local references are the default. Load a
+matching installed specialization only for a concrete unresolved API/runtime question, a changed
+risk needing deeper technique, or required evidence unavailable through the bundle. Specialists
+increase certainty; they do not replace or duplicate the role. If required evidence is otherwise
 unobtainable, read
 [Missing specialist installation](references/specialist-skill-installation.md).
 
 ## Workflow
 
-1. **Establish scope.** Record accepted behavior, product rule IDs and delta, deliberately unmodeled
-   paths, supported toolchain/platforms, dependency pins, process surfaces, owners, and required
-   proof. Describe the lean baseline first.
-2. **Trace the live system.** Follow real composition, navigation, feature roots, persistence,
-   effects, tests, and lifetimes. Model cancellation, retry, stale results, recovery, or repeated
-   delivery only when accepted behavior or an evidenced constraint requires them.
-3. **Define ownership and direction.** Give every responsibility one owner and one allowed edge.
-   Keep Domain independent, adapters in Frameworks, application mapping in Datasources, behavior in
-   Features, destinations in Navigation, and assembly at each process composition root. Add a target
-   or protocol only for a real ownership, visibility, process, or variation boundary.
-4. **Define behavior and effects.** Start from `Equatable & Sendable` values, pure decisions, finite
-   failures, and small feature-owned ports. Use a pure function, local presentation state,
-   structured async operation, or coordinator when sufficient. If a machine is admitted, trace each
-   state, event, route, output cardinality, cancellation policy, and outcome to a rule or constraint.
-5. **Make the contract executable.** Specify owner-local and integration tests, forbidden-edge
-   guardrails, localization/accessibility impact, required migration/recovery, and runtime evidence
-   without freezing private decomposition.
+1. **Scope and trace.** Record behavior, rule delta, exclusions, platform/dependency constraints,
+   owners, lean baseline, and proof; follow live composition, effects, persistence, navigation,
+   tests, and lifetimes.
+2. **Design.** Give each responsibility one owner and allowed edge. Start from pure decisions,
+   `Equatable & Sendable` values, finite failures, and small ports. Admit targets, protocols,
+   machines, cancellation, retry, correlation, and recovery only from accepted evidence.
+3. **Make it executable.** Specify seams, migration/recovery, owner/integration tests, forbidden-edge
+   checks, localization/accessibility, runtime evidence, and reusable proof without freezing private
+   decomposition.
 
 ## Deliverable and handoff
 

@@ -106,6 +106,11 @@ python3 scripts/validate_swift_skills.py
 Add `--compile` to type-check the representative Swift snippets and build/test the Architect and
 Developer teaching fixtures in isolated scratch directories.
 
+For context-budget comparisons, generate a role/reference size and duplicate-content report with
+`python3 scripts/report_swift_skill_sizes.py` (use `--json` for a machine-readable artifact). The
+report describes available bundle size; the active role and selected references still depend on the
+task routing rules.
+
 ## Model adaptation and validation
 
 For GPT-6 Astra, keep instructions outcome-focused: preserve scope and existing authorization,

@@ -12,7 +12,8 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_NAMES = ("swift-architect", "swift-developer", "swift-reviewer")
-WORD_BUDGET = 1_000
+WORD_BUDGET = 900
+REFERENCE_WORD_BUDGET = 3_600
 LINK_PATTERN = re.compile(r"\[[^\]\n]+\]\(([^)\n]+)\)")
 HEADING_PATTERN = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 LITERAL_PATH_PATTERN = re.compile(
@@ -118,6 +119,13 @@ def validate_frontmatter(skill_dir: Path, errors: list[str]) -> None:
 
 def validate_markdown(markdown: Path, errors: list[str]) -> None:
     text = markdown.read_text(encoding="utf-8")
+    if markdown.parent.name == "references":
+        word_count = len(text.split())
+        if word_count > REFERENCE_WORD_BUDGET:
+            errors.append(
+                f"{markdown}: {word_count} words exceeds the "
+                f"{REFERENCE_WORD_BUDGET}-word reference budget; split by retrieval need"
+            )
     if text.count("```") % 2:
         errors.append(f"{markdown}: unbalanced fenced code block")
 
@@ -160,12 +168,16 @@ def validate_literal_paths(skill_dir: Path, markdown: Path, errors: list[str]) -
 
 
 def validate_synced_references(errors: list[str]) -> None:
-    architect = ROOT / "swift-architect/references/state-machine-features.md"
-    developer = ROOT / "swift-developer/references/state-machine-features.md"
-    if architect.read_bytes() != developer.read_bytes():
-        errors.append(
-            "Architect and Developer state-machine references are not byte-identical"
-        )
+    for filename in (
+        "state-machine-features.md",
+        "state-machine-interleavings.md",
+    ):
+        architect = ROOT / "swift-architect/references" / filename
+        developer = ROOT / "swift-developer/references" / filename
+        if architect.read_bytes() != developer.read_bytes():
+            errors.append(
+                f"Architect and Developer {filename} references are not byte-identical"
+            )
 
     specialist_files = [
         ROOT / name / "references/specialist-skill-installation.md"
@@ -229,6 +241,48 @@ def validate_output_contract(errors: list[str]) -> None:
     }
     errors.extend(message for message, passed in checks.items() if not passed)
 
+    composition_dir = (
+        ROOT
+        / "swift-architect/assets/ArchitectureExample/Sources/AppComposition"
+    )
+    composition_root = (composition_dir / "AppCompositionRoot.swift").read_text(
+        encoding="utf-8"
+    )
+    composition_factory_path = composition_dir / "AppCompositionRoot+Profile.swift"
+    if not composition_factory_path.is_file():
+        errors.append("ArchitectureExample lacks its owner-named composition factory extension")
+    else:
+        composition_factory = composition_factory_path.read_text(encoding="utf-8")
+        composition_checks = {
+            "composition root does not retain the direct factory result": (
+                "profileStateMachineFactory = Self.makeProfileFactory("
+                in composition_root
+            ),
+            "composition factory is not owner-named": (
+                "static func makeProfileFactory(" in composition_factory
+            ),
+            "composition factory is not an instance factory": (
+                "ProfileStateMachineFactory(lifecycle: .instance) {"
+                in composition_factory
+            ),
+            "machine-scoped datasource is not built lazily": (
+                "ProfileRemoteDataSource(" in composition_factory
+                and "ProfileRemoteDataSource(" not in composition_root
+            ),
+            "owner Outputs are not built lazily": (
+                "ProfileOutputs(" in composition_factory
+                and "ProfileOutputs(" not in composition_root
+            ),
+            "runtime logging policy is not app-owned": (
+                "makeProfileStateMachine(outputs: outputs).disableLog()"
+                in composition_factory
+                and ".disableLog()" not in machine
+            ),
+        }
+        errors.extend(
+            message for message, passed in composition_checks.items() if not passed
+        )
+
     architect_reference = (
         ROOT / "swift-architect/references/state-machine-features.md"
     ).read_text(encoding="utf-8")
@@ -236,6 +290,8 @@ def validate_output_contract(errors: list[str]) -> None:
         "one owner-named `Outputs` value",
         "`callAsFunction` returns the side-effect function",
         "Output(sideEffect: outputs.cleanup())",
+        "one direct owner-named `make...Factory` function",
+        "runtime-environment policy",
     )
     for fragment in required_reference_fragments:
         if fragment not in architect_reference:
@@ -275,6 +331,8 @@ def validate_output_contract(errors: list[str]) -> None:
         "factory receives one owner-named",
         "`callAsFunction` returns the side-effect function",
         "`Output(sideEffect: outputs.operation(...))`",
+        "machine/destination-scoped adapters",
+        "Runtime logging, dump, or diagnostic policy",
     )
     for fragment in reviewer_fragments:
         if fragment not in reviewer_method:
@@ -286,6 +344,81 @@ def validate_output_contract(errors: list[str]) -> None:
     )
     if "assets/ArchitectureExample" in developer_reference_tree:
         errors.append("Developer references point to the Architect-only fixture")
+
+
+def validate_efficiency_contract(errors: list[str]) -> None:
+    def normalized(path: Path) -> str:
+        return re.sub(r"\s+", " ", path.read_text(encoding="utf-8")).lower()
+
+    state_machine = normalized(
+        ROOT / "swift-developer/references/state-machine-interleavings.md"
+    )
+    state_fragments = (
+        "observed, staged, and admitted identity",
+        "emits a correlated result",
+        "same-identity snapshots",
+        "no transition and no effect",
+        "non-cooperative dependency",
+    )
+    for fragment in state_fragments:
+        if fragment not in state_machine:
+            errors.append(f"state-machine interleaving matrix is missing: {fragment}")
+
+    reviewer_method = normalized(ROOT / "swift-reviewer/references/review-method.md")
+    for fragment in state_fragments:
+        if fragment not in reviewer_method:
+            errors.append(f"Reviewer interleaving scan is missing: {fragment}")
+
+    developer_skill = normalized(ROOT / "swift-developer/SKILL.md")
+    if "complete the applicable pre-review interleaving matrix" not in developer_skill:
+        errors.append("Developer workflow does not require the pre-review interleaving matrix")
+
+    feedback_loop = normalized(ROOT / "swift-reviewer/references/feedback-loop.md")
+    if "report them together in that one" not in feedback_loop:
+        errors.append("Reviewer feedback loop does not batch source-visible findings")
+
+    for skill_name in SKILL_NAMES:
+        skill = normalized(ROOT / skill_name / "SKILL.md")
+        if "role-local references are the default" not in skill:
+            errors.append(f"{skill_name} does not default to role-local references")
+        if "at most three role-local references initially" not in skill:
+            errors.append(f"{skill_name} does not enforce the initial reference budget")
+        handoff = normalized(ROOT / skill_name / "references/handoff-contract.md")
+        handoff_fragments = (
+            "at or below 5,000 characters",
+            "at or below 6,000 characters",
+            "evidence-ledger:",
+            "same completion response",
+            "same-role",
+            "evidence validity",
+        )
+        for fragment in handoff_fragments:
+            if fragment not in handoff:
+                errors.append(f"{skill_name} compact handoff is missing: {fragment}")
+
+    architect_skill = normalized(ROOT / "swift-architect/SKILL.md")
+    if "compact task execution map" not in architect_skill:
+        errors.append("Architect does not establish the compact task execution map")
+
+    developer_skill = normalized(ROOT / "swift-developer/SKILL.md")
+    developer_fragments = (
+        "acceptance/risks, baseline, owners/paths, prerequisites, and proof",
+        "30–60 seconds",
+        "one complete required lane on the final frozen diff",
+    )
+    for fragment in developer_fragments:
+        if fragment not in developer_skill:
+            errors.append(f"Developer execution discipline is missing: {fragment}")
+
+    reviewer_skill = normalized(ROOT / "swift-reviewer/SKILL.md")
+    reviewer_fragments = (
+        "final scoped diff identity",
+        "narrow independent proof plan",
+        "source-visible findings from a pass together",
+    )
+    for fragment in reviewer_fragments:
+        if fragment not in reviewer_skill:
+            errors.append(f"Reviewer execution discipline is missing: {fragment}")
 
 
 def validate_no_generated_state(errors: list[str]) -> None:
@@ -444,6 +577,7 @@ def main() -> int:
     validate_markdown(ROOT / "README.md", errors)
     validate_synced_references(errors)
     validate_output_contract(errors)
+    validate_efficiency_contract(errors)
     validate_no_generated_state(errors)
 
     if errors:

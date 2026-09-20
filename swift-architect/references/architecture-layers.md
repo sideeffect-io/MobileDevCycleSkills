@@ -38,14 +38,22 @@ evidence that the architecture is ready for feature implementation.
   actual feature. Apply the same distinction to adapters, datasources, and navigation. Cohesive
   Domain and SharedUI targets may retain those names. Do not require unused layers, a fixed package
   count, or the reference example's feature inventory.
+- When the product already defines several stable navigation areas with distinct feature
+  dependencies, scaffold owner-named Navigation products/targets for those areas and let root
+  navigation compose them. Do not pre-create hypothetical areas or copy another product's area
+  names; apply the [Navigation](#navigation) ownership and target criteria to the accepted journeys.
 - Bind each owner's exact target dependencies and public product, source/resource paths, test
   owner, and consuming target or executable linkage. Aggregate products do not create aggregate
   source modules. Keep feature resources with their target and tests under `Tests/<Target>Tests` unless
   an established project layout has an equally explicit mapping.
 - At executable boundaries, separate injected construction from live SDK assembly and startup.
-  The process root retains shared owners; previews and composition tests can supply inert dependencies. Keep stateless
-  presentation as values and semantic callbacks. When the first real stateful workflow arrives,
-  demonstrate feature-owned effect ports and
+  The process root retains shared owners; previews and composition tests can supply inert dependencies.
+  For a root with multiple machine-backed destinations, scaffold one owner-named
+  `AppCompositionRoot+<Owner>.swift` extension and one direct `make...Factory` function per retained
+  factory. Each factory closure constructs machine-scoped adapters, capabilities, `Outputs`, and
+  coordinators on demand; it captures, rather than rebuilds, process-scoped owners whose identity or
+  state crosses machines. Keep stateless presentation as values and semantic callbacks. When the
+  first real stateful workflow arrives, demonstrate feature-owned effect ports and
   [Environment injection](#data-observation-and-environment-injection). Apply that boundary to the
   first live-data screen even when simple feature state is sufficient; do not manufacture a workflow,
   registry, or service container to complete a template.
@@ -127,6 +135,33 @@ Own launch, tabs, route values, deep-link interpretation, feature-root presentat
 outcome orchestration. Depend on exact feature modules and dependency-light routing contracts. Do
 not retrieve, mutate, or adapt Frameworks/Datasources data on behalf of a child feature.
 
+Treat `Navigation` as a package-level composition boundary, not as one mandatory router or state
+machine. When a product has stable navigation areas with distinct destinations or feature
+dependencies, prefer owner-named products/targets for those areas. A tab-based app might compose
+`HomeNavigation`, `TripsNavigation`, `StatisticsNavigation`, and `SettingsNavigation` from
+`AppNavigation`; use the product's actual vocabulary and omit areas it does not have.
+
+Root navigation owns app-wide facts such as launch/admission, session or account lifetime, primary
+area or tab selection, cross-area external ingress, and chrome or context selection whose lifetime
+spans several areas. Each area navigation owns its stack/path, destinations, sheets or covers,
+feature-root composition, and translation of semantic feature callbacks/outcomes. Feature roots
+receive injected closures such as `openSharing`, `openStudentProfile`, or `outcome`; they never
+import parent destinations or mutate parent navigation state. Prefer the graph
+`AppNavigation -> <Area>Navigation -> exact Feature targets` over having `AppNavigation` import and
+route every leaf feature directly.
+
+Do not put every area's routes and presentations into one large `AppNavigation` state machine merely
+because they ship in the same package. Admit a root machine only for behavioral transitions owned by
+the root; compose area roots directly, and let an area use local navigation state or its own focused
+machine only when its accepted workflow requires one. A thin area target may remain stateless when
+its value is a real dependency/ownership firewall with a concrete consumer; it does not need an empty
+machine or symmetry test.
+
+For example, a Student selector shown in Home, Trips, and Statistics but excluded from Settings is
+shared root-navigation chrome. Root navigation owns the selection and any cross-area invalidation;
+the three Features do not each embed or coordinate their own selector. Area-specific toolbar items
+remain with their area navigation owner.
+
 ### App and extensions
 
 <!-- swift-suite:SWIFT-COMPOSITION -->
@@ -143,6 +178,15 @@ Composition chooses concrete providers and lifetimes; it does not absorb feature
 cancellation decisions, or result-to-event mapping. Those remain in the feature-owned output that
 orchestrates the injected operations.
 
+Treat each `AsyncStateMachineFactory` as the lazy machine-composition boundary. Its owner-named
+composition-root extension builds destination/machine-scoped concrete facades, feature capabilities,
+the owner-named `Outputs`, and the machine inside the factory closure. Retain process-long clients,
+data stores, native presentation owners, or other cross-machine state once and capture them in those
+closures. Apply executable runtime policy, such as disabling payload logging or enabling diagnostics,
+to the produced machine at this boundary. Feature and Navigation machine declarations remain unaware
+of providers, process mode, Debug/Release configuration, and logging policy. These extensions organize
+direct composition; they are not a second DI layer, registry, or forwarding-provider graph.
+
 For example, composition may create a generic CoreData DAO from `CoreDataFramework`, pass it to
 `TripsDataSource`, then close over `TripsDataSource.loadTrips` when constructing the feature-owned
 `LoadTripsOutput`. Neither the feature nor its state machine imports either concrete target.
@@ -155,12 +199,13 @@ Expose domain values and explicit observation APIs (streams or cancellable subsc
 Internal mutable state for listeners, identity isolation, caching, or persistence remains owned by
 the datasource where required; this rule does not require stateless datasources or one-shot reads.
 
-The app composition root constructs Datasources and adapts their operations into feature-owned
-ports. When the feature uses SwiftStateMachine, initialize its semantic output structs, compose them
-into one owner-named `Outputs` value, pass that value to the machine factory, and inject the factory
-directly. For a simpler feature, inject its narrow capabilities through typed SwiftUI Environment
-values. Do not place a concrete datasource, SDK client, broad service container, or the composition
-root itself in the feature's Environment or public dependency contract.
+The app composition root constructs process-scoped Datasources and adapts concrete operations into
+feature-owned ports. When the feature uses SwiftStateMachine, the retained factory lazily constructs
+its machine-scoped dependencies, semantic output structs, and one owner-named `Outputs` value inside
+the build closure, passes that value to the package machine builder, and is injected directly. For a
+simpler feature, inject its narrow capabilities through typed SwiftUI Environment values. Do not place
+a concrete datasource, SDK client, broad service container, or the composition root itself in the
+feature's Environment or public dependency contract.
 
 The consuming feature root declares its Environment key with a deterministic, side-effect-free
 default, reads it through `@Environment`, and owns its presentation state. Use `@Entry` when supported

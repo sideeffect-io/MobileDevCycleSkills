@@ -73,8 +73,42 @@ if "@Sendable" in profile_outputs:
     raise SystemExit("ProfileOutputs must compose semantic outputs, not raw closure capabilities")
 if "enum ProfileCancellation" in machine:
     raise SystemExit("output cancellation policy belongs in Outputs.swift")
+
+example = machine_dir.parents[2]
+composition_dir = example / "Sources" / "AppComposition"
+root = (composition_dir / "AppCompositionRoot.swift").read_text(encoding="utf-8")
+factory_path = composition_dir / "AppCompositionRoot+Profile.swift"
+if not factory_path.is_file():
+    raise SystemExit("App composition is missing its owner-named factory extension")
+factory = factory_path.read_text(encoding="utf-8")
+if "profileStateMachineFactory = Self.makeProfileFactory(" not in root:
+    raise SystemExit("AppCompositionRoot must retain the direct factory result")
+for eager_fragment in (
+    "ProfileRemoteDataSource(",
+    "ProfileOutputs(",
+    "ProfileStateMachineFactory(lifecycle:",
+):
+    if eager_fragment in root:
+        raise SystemExit(
+            f"AppCompositionRoot eagerly assembles machine dependency: {eager_fragment}"
+        )
+factory_fragments = (
+    "extension AppCompositionRoot",
+    "static func makeProfileFactory(",
+    "ProfileStateMachineFactory(lifecycle: .instance) {",
+    "ProfileRemoteDataSource(",
+    "ProfileOutputs(",
+    "makeProfileStateMachine(outputs: outputs).disableLog()",
+)
+positions = [factory.find(fragment) for fragment in factory_fragments]
+if -1 in positions or positions != sorted(positions):
+    raise SystemExit(
+        "Profile factory must lazily assemble datasource, Outputs, machine, and runtime policy"
+    )
+if ".disableLog()" in machine:
+    raise SystemExit("package machine declaration must not own runtime logging policy")
 PY
-echo "Validated StateMachine layout and owner-Outputs contract."
+echo "Validated StateMachine layout, lazy app factory, and runtime-policy boundary."
 
 "$swift_bin" package --package-path "$example" dump-package | python3 -c '
 import json

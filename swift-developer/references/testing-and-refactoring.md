@@ -17,7 +17,7 @@ change, failure, invalidated evidence, or concrete unresolved concern warrants i
 | State machine | complete journeys, forbidden pairs, guards, effects, stale results, recovery |
 | SwiftUI/root | input activation, callback delivery, identity, environment default, accessibility |
 | Navigation | semantic outcome to route/state, deep-link correlation, unsupported terminal result |
-| Composition | live adapter-to-capability wiring and intended factory/service lifetime |
+| Composition | live adapter-to-capability wiring, lazy machine dependency construction, intended factory/service lifetime, and runtime logging policy |
 | Architecture | forbidden imports/edges, visibility, resources, test ownership, complexity exceptions |
 
 Prefer Swift Testing for unit and integration tests: `@Test`, `#expect`, `#require`, traits, and
@@ -54,7 +54,10 @@ cancellation and deallocation intentionally.
 
 For SwiftStateMachine, use the consumer's `StateMachineTest` product to prove complete state
 journeys and forbidden transitions. Test output capabilities directly, including cancellation
-mapping and stream completion. Correlate and reject stale results in tests.
+mapping and stream completion. Correlate and reject stale results in tests. A negative stale or
+mismatched-completion test proves both no transition and no effect. Use a non-cooperative dependency
+behind a deterministic gate for cancellation races; repeat deterministic scheduling only to amplify
+a reproduced race, not to replace synchronization.
 
 ## Behavior-preserving refactoring
 

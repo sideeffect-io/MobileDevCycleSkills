@@ -31,6 +31,27 @@ These risk lists do not create acceptance criteria for hypothetical failures or 
 Reuse inspected evidence for the same diff and environment; replay only when provenance, relevance,
 or remaining uncertainty warrants it. Independent assessment does not require duplicate full suites.
 
+### Pre-review interleaving matrix
+
+Before broad validation replay, statically scan each affected async workflow whose legality depends
+on identity, admission, or an operation token:
+
+1. Observed, staged, and admitted identity remain distinct when they mean different facts. Only
+   accepted semantic success changes admission; cancellation restores the previous admission, and
+   loading/unavailable observation does not relax the fence.
+2. When machine admission decides whether mutation is legal, an output emits a correlated result
+   before durable/external mutation; the machine admits it before selecting the correlated apply
+   output.
+3. Suspended work either rebases authoritative same-identity snapshots across success, failure, and
+   cancellation, or cancels on identity replacement.
+4. Every operation-specific state rejects mismatched completion, with a negative test proving both
+   no transition and no effect.
+5. Cancellation/stale proof includes a deliberately non-cooperative dependency and deterministic
+   gate. Repetition is useful only to amplify a real race, not to replace explicit synchronization.
+
+Apply only rows supported by accepted workflow facts. Missing identity stages, correlation, or
+cancellation are not findings unless the workflow actually needs those mechanisms.
+
 ### Correctness and safety
 
 Check invariants, invalid input, finite failure mapping, stale results, retries, cancellation,
@@ -45,11 +66,28 @@ ownership, resources, and target-local tests. If a combined Infrastructure fallb
 that its cohesive/legacy rationale is explicit and that it preserves the same forbidden edges.
 Confirm a compiler boundary exists where the architecture contract claims one.
 
+For a multi-area `Navigation` package, distinguish app-wide root ownership from area ownership. The
+root may own launch/admission, session lifetime, primary tab or area selection, cross-area ingress,
+and shared navigation chrome. Each area should own its stack/path, destinations, presentations,
+feature roots, and semantic callback/outcome translation. Inspect whether `AppNavigation` composes
+owner-named areas with exact dependencies or instead imports every leaf Feature and accumulates one
+unrelated route/presentation machine. Also reject the inverse: mechanical area targets, empty
+machines, or symmetry tests with no accepted area, consumer, or dependency firewall.
+
 For a SwiftStateMachine owner, verify the stable `StateMachine/States.swift`, `Events.swift`,
 `Outputs.swift`, and `StateMachine.swift` layout. The machine factory receives one owner-named
 `Outputs` value, not raw capabilities or a parallel dependency bag. Each semantic output is a
 `Sendable` struct whose `callAsFunction` returns the side-effect function; the route declares
 `Output(sideEffect: outputs.operation(...))` explicitly beside its transition.
+
+At executable composition, verify that each retained machine factory has one direct owner-named
+factory-making function. Its build closure constructs machine/destination-scoped adapters,
+capabilities, `Outputs`, and coordinators lazily, while process-scoped owners whose state or identity
+crosses machines are retained once and captured. Runtime logging, dump, or diagnostic policy belongs
+on the produced machine at this executable boundary; a Feature or Navigation machine declaration
+must not select behavior from process mode or Debug/Release configuration. Owner-named composition-
+root extensions keep a growing multi-factory root readable, but must not become a registry, provider
+chain, or mirrored DI layer.
 
 ### Functional design and readability
 
@@ -66,6 +104,12 @@ Perform a mechanism-to-behavior pass for each added target, machine, protocol, w
 factory/environment entry, test product, or guardrail. Identify its protected failure class, simpler
 alternative, and concrete API, build, tracing, ownership, or test cost. Do not block a scoped change
 for unrelated existing debt or report a count without impact.
+
+For navigation composition, verify that Feature roots emit semantic closures rather than importing
+parent routes, and that cross-area chrome/context is owned once at root lifetime. For example, a
+Student selector shared by Home, Trips, and Statistics but absent from Settings should not be
+duplicated in those Features. A navigation area may remain stateless or use local presentation/path
+state; require a focused state machine only when accepted state-dependent behavior earns one.
 
 When the repository has no stricter policy, inspect functions beyond 15-20 logical lines, 4 or more
 independent parameters, 4 levels of nesting, cyclomatic complexity above 10, transformation chains

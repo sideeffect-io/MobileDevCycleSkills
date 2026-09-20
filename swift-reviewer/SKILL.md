@@ -27,10 +27,21 @@ scoring policy, and stricter project constraints. This skill owns reusable Swift
 5. Lead with findings ordered by severity. Give exact evidence, impact, violated contract, minimal
    remediation, and required proof; re-review every remediation.
 
-Read `must`, `never`, and `required` as contracts; `prefer` is the default unless evidence supports
-another valid choice. Ask only when an undiscoverable answer would materially change product
-behavior, scope, authority, or irreversible consequences. User direction overrides this skill's
-defaults. Load only task-relevant references and sections.
+Read `must`, `never`, and `required` as contracts; `prefer` is the default. Ask only when an
+undiscoverable answer materially changes behavior, scope, authority, or irreversible consequences.
+Load this entrypoint and at most three role-local references initially; record the unresolved risk
+before loading a fourth. User direction overrides defaults.
+
+## Execution discipline
+
+Before commands, match the evidence ledger to the baseline, final scoped diff identity, environment,
+and claimed proof, then write the narrow independent proof plan. Reuse valid evidence; replay only the
+changed/high-risk seam. Batch bounded owner/path queries and artifact summaries; report all
+source-visible findings from a pass together.
+
+Review a frozen Developer diff with a compact evidence ledger. Load the review method plus one matching
+reference family; do not preload unrelated role references. For presentation/lifetime changes, replay
+mounted destination/controller identity, not only transitions.
 
 ## Lean review contract
 
@@ -70,32 +81,22 @@ unless the user makes them contractual.
 | Finding routing, remediation batches, re-review | [Feedback loop](references/feedback-loop.md) |
 | Lifecycle transition without a complete local contract | [Swift handoff contract](references/handoff-contract.md) |
 
-When a concrete uncertainty remains, load the matching installed specialization in the current
-Reviewer agent: `swift-concurrency` for isolation/cancellation, `swiftui-expert` or
-`mobile-ios-design` for UI/accessibility, the App Intents skill for system surfaces, or the
-debugger/performance skills for runtime, trace, and leak evidence. Specialists provide evidence;
-do not spawn or switch roles for specialization. The Reviewer owns findings and verdict. If
-required evidence is otherwise unobtainable, read
+Role-local references are the default. Load a specialization only for a concrete unresolved
+API/runtime question or missing proof; it does not replace or duplicate the role. The Reviewer owns
+findings and verdict. If evidence is otherwise unobtainable, read
 [Missing specialist installation](references/specialist-skill-installation.md).
 
 ## Review workflow
 
-1. **Confirm scope.** Validate requested outcomes, product rules/delta, accepted and deliberately
-   unmodeled paths, owners, preserved behavior, risk, and claimed evidence. Read source tests when
-   behavior or API changed.
-2. **Check hard gates.** Check compile/test state, forbidden edges, data loss, race/cancellation risk,
-   API availability, localization/accessibility, migration/recovery, runtime proof, and product-
-   contract maintenance where applicable. A failed or required-but-missing gate blocks readiness.
-3. **Trace architecture and behavior.** Follow intent through UI, events, effects, adapters,
-   outputs, persistence, and navigation. Check dependency direction, access, composition, lifetime,
-   and test ownership against the live contract.
-4. **Perform the necessity pass.** Trace each material mechanism and changed state/event/output to an
-   accepted rule or evidenced constraint. Challenge speculative recovery, duplicated policy, hidden
-   topology, wrappers without a consumer, and tests/guardrails that freeze private decomposition.
-5. **Validate and converge.** Replay the narrowest high-risk evidence with independent provenance,
-   report findings and residual risk, then re-review only remediated findings and invalidated proof.
-   Never score unless asked; numeric scores are diagnostic unless the repository makes a threshold
-   binding.
+1. **Scope and gates.** Confirm outcomes, rule delta, exclusions, owners, diff identity, and evidence;
+   check build/tests, boundaries, data/race risk, API availability, accessibility/localization,
+   migration/recovery, runtime proof, and contract maintenance.
+2. **Trace and challenge.** Follow intent through UI, events, effects, adapters, persistence, and
+   navigation. Apply relevant interleaving checks, then map every material mechanism to accepted
+   evidence and challenge speculative recovery, duplicate policy, hidden topology, and empty seams.
+3. **Converge.** Replay the narrowest high-risk proof independently, report findings together, and
+   re-review only remediation and invalidated proof. Reuse a green full lane when its diff,
+   environment, inputs, provenance, and relevance remain valid. Score only when requested or required.
 
 ## Finding and verdict contract
 

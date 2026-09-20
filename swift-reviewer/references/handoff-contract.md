@@ -40,6 +40,9 @@ ACCEPTANCE:
 CURRENT-STATE:
 - <findings, evidence outcomes, deviations, blocked checks, and residual risk>
 
+EVIDENCE-LEDGER:
+- <gate: result/reference; diff identity; VALID | INVALIDATED and reason>
+
 BINDING:
 - NONE
 or:
@@ -75,9 +78,17 @@ or:
 === END ===
 ```
 
+Budget the first complete block at or below 5,000 characters and keep every accepted block at or
+below 6,000 characters. Put it in the same completion response as the role result; do not send a
+handoff-only preamble followed by an expanded or condensed duplicate. Use task-contract path/revision,
+product-rule IDs, baseline revision, and scoped diff identity instead of copying stable source text.
+The first handoff to a role is self-contained through those references and active decisions; a
+same-role follow-up carries only changed decisions, findings, evidence validity, and next work.
+
 Carry `OBJECTIVE`, `ACCEPTANCE`, and active `BINDING` items forward without changing their meaning.
 Do not change them silently: Root may revise `OBJECTIVE` or `ACCEPTANCE` after explicit user
 direction, and Architect may supersede a `BINDING` item during an architecture correction. Record
 each authorized revision and its reason in `CURRENT-STATE`.
 Refresh every other section for the receiving role. `NEXT-INSTRUCTIONS` must state what to do and
-how to establish the expected result.
+how to establish the expected result. Mark evidence invalidated only when the diff/environment,
+behavior, owner, dependency/build inputs, provenance, or relevance changed.

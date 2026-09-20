@@ -27,6 +27,12 @@ An `await` is a reentrancy boundary. Revalidate actor state after suspension whe
 could have changed the assumptions. Keep actor-isolated critical decisions synchronous where
 possible.
 
+When an operation spans authoritative identity/state observation, define whether same-identity
+updates rebase the suspended operation and whether identity replacement cancels it. Apply the same
+policy on success, failure, and cancellation; a cancellation path that restores stale pre-operation
+state is still a race. Do not treat cooperative task cancellation as proof that a dependency cannot
+deliver a late result.
+
 A `Task {}` created from actor-isolated code normally inherits that actor. It is not a background-
 execution primitive. Likewise, calling a synchronous `nonisolated` helper does not transfer work to a
 different executor; the caller still performs that work. Move ownership to the correct actor or use
@@ -106,7 +112,9 @@ suspension or termination.
 ## Concurrency verification
 
 Build with the consumer's actual strict settings. Test cancellation, replacement, reentrancy, stale
-results, stream termination, and deallocation. Add a regression that invokes non-UI capabilities
+results, stream termination, and deallocation. For stale-result fencing, include a dependency that
+ignores cancellation until a deterministic gate releases it; assert the late result causes neither
+state transition nor effect. Add a regression that invokes non-UI capabilities
 from a non-main actor so accidental global-actor propagation fails at compile time or in the focused
 test boundary. Use deterministic gates/continuations instead of short sleeps. Run Thread Sanitizer
 or actor race checks when appropriate, while recognizing that a clean run is supplementary to

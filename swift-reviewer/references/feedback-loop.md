@@ -27,6 +27,11 @@ For each item, state the required constraints and proof. Avoid prescribing a lar
 when several valid designs satisfy the current architecture decisions. Route a design contradiction
 to `swift-architect` with the exact manifest/source evidence.
 
+Complete the source-level execution/interleaving scan before sending the first remediation handoff.
+When the same inspected path exposes several concrete findings, report them together in that one
+coherent batch rather than serializing already-discoverable issues across review turns. Do not delay
+a finding merely to accumulate speculative concerns or wait for unrelated broad validation.
+
 ## Developer response contract
 
 For lifecycle work, the next current handoff summarizes:
@@ -53,6 +58,8 @@ For every previous finding, assign one status:
 Review changed lines plus their affected execution/ownership path. Re-review only affected findings,
 dimensions, evidence, and regression gates unless the remediation broadened scope.
 Do not redo unrelated expensive validation unless the fix broadened scope.
+Reuse evidence explicitly marked valid for the current diff/environment; rerun a gate only when the
+remediation changes its behavior, owner, dependency/build inputs, provenance, or relevance.
 Look for regressions introduced by the remediation, especially visibility, dependency edges,
 duplicate ownership, cancellation, and test-only code in production.
 

@@ -15,6 +15,7 @@
 - [Output cardinality and orchestration](#output-cardinality-and-orchestration)
 - [Retry, correlation, cancellation, and observation](#retry-correlation-cancellation-and-observation)
 - [Factory and SwiftUI ownership](#factory-and-swiftui-ownership)
+- [Navigation area composition](#navigation-area-composition)
 - [Feature communication and decomposition](#feature-communication-and-decomposition)
 - [Required tests](#required-tests)
 
@@ -394,34 +395,9 @@ Frameworks/Datasources and closes over their operations.
 
 ## Retry, correlation, cancellation, and observation
 
-A shared retry state is appropriate when its payload parameterizes the same semantic retry
-operation with ordinary data and the Retry route selects the same output family without branching
-over operation kinds. For example, `TripIsAwaitingLoadRetry(tripID:)` can retry `LoadTrip(tripID:)`
-for any identifier.
-
-Keep distinct retry states when Retry selects different semantic effect families, business phases,
-commit boundaries, authoritative owners, rollback rules, or recovery paths, even when those states
-project to the same UI and accept the same Retry event.
-
-A closed retry-plan value remains permissible when it is already a meaningful domain concept and
-demonstrably improves local reasoning. Do not introduce one solely to reduce concrete-state count.
-A `switch` over one case per former retry state is normally hidden topology rather than
-simplification. Boolean retry flags, nullable command bags, and open executable command containers
-remain forbidden.
-
-Carry a request/generation/observation ID only when operations can overlap, earlier work can be
-replaced, stale completion may arrive, equal outcomes can repeat, or another owner requires an
-acknowledgement protocol. A proved actor-serialized or single-flight workflow does not need
-per-phase correlation merely for consistency.
-
-Define cancellation for every long-lived or replaceable output. Cancellation is cooperative;
-cancelling old work does not itself define the route that starts replacement. Test both. Use
-lifecycle restart only for resilient subscriptions/polling with an explicit policy; ordinary loads
-use explicit retry behavior when retry is accepted product behavior.
-
-Authoritative observations normally live for the owning machine lifetime, not view visibility.
-Use suitable buffering and test termination, replacement, and stale delivery where those risks are
-real. Never create competing iterators over one unicast machine.
+Load [State-machine interleavings](state-machine-interleavings.md) only when accepted behavior
+includes retry, replaceable or long-lived work, authoritative observation, identity admission,
+correlation, cancellation, or stale-result risk.
 
 ## Factory and SwiftUI ownership
 
@@ -430,6 +406,18 @@ feature-owned environment value with a deterministic side-effect-free default. P
 `StateMachineView`; do not add a registry, provider chain, type erasure, or forwarding factory
 function without a current consumer-owned need.
 
+At executable composition, use one direct owner-named `make...Factory` function for each retained
+machine factory. Inside its build closure, construct dependencies that share the machine or
+destination lifetime, then the feature capabilities, owner-named `Outputs`, and machine. Capture
+already-retained process owners whose identity or state must cross machines; do not eagerly assemble
+machine-scoped dependencies when constructing the composition root, and do not rebuild process owners
+per destination merely to make every dependency lazy.
+
+Apply runtime-environment policy such as disabling payload logging, activating dumps, or installing
+diagnostics to the produced machine in the executable factory. The package-owned
+`make...StateMachine(outputs:)` declaration stays independent of concrete providers, process mode,
+Debug/Release configuration, and logging policy.
+
 Use `.instance` unless multiple consumers intentionally share one runtime. A `.singleton` applies
 only within one retained factory instance; document the retaining owner and lifetime.
 
@@ -437,6 +425,29 @@ Only the feature root owns `StateMachineView`/`UIStateMachine`. Child views rece
 projections and semantic closures. The root receives typed input and outcomes where needed. Keep
 the machine factory independent of callbacks; activate through a typed event from an awaiting-input
 state when activation itself is behavioral.
+
+## Navigation area composition
+
+A `Navigation` package is not one state-machine owner. When accepted journeys form stable areas with
+distinct destinations or feature dependencies, compose owner-named navigation targets instead of
+growing one package-wide machine. In a tab app, for example, `AppNavigation` might compose
+`HomeNavigation`, `TripsNavigation`, `StatisticsNavigation`, and `SettingsNavigation`. These names
+are examples, not a target inventory to copy into products that do not have those areas.
+
+Keep app-wide behavior in the root owner: launch/admission, session lifetime, primary tab or area
+selection, external ingress that crosses areas, and shared navigation chrome. Each area owns its
+stack/path, destinations, presentations, feature roots, and translation of semantic callbacks or
+outcomes. Feature roots receive injected closures and never import parent route or machine types.
+When an app-wide context selector appears in several areas but not all of them, such as a Student
+selector on Home, Trips, and Statistics but not Settings, root navigation owns it rather than each
+Feature or area duplicating its state and effects.
+
+Do not model every destination or sheet as a state in one `AppNavigation` machine. A root machine is
+appropriate only for state-dependent decisions at root lifetime. Compose area roots directly; an
+area may use `NavigationPath`, local presentation state, or a focused machine when its own accepted
+workflow earns that topology. A stateless area target with a real dependency firewall and consumer
+does not need an empty machine. Prefer `AppNavigation -> <Area>Navigation -> exact Feature targets`
+over direct root imports of every leaf Feature.
 
 ## Feature communication and decomposition
 

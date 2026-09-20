@@ -27,8 +27,20 @@ stricter project constraints. This skill owns reusable Swift implementation doct
 5. Ask only when an undiscoverable answer would materially change product behavior, scope,
    authority, or irreversible consequences. User direction overrides this skill's defaults.
 
-Read `must`, `never`, and `required` as contracts; `prefer` is the default unless evidence supports
-another valid choice. Load only task-relevant references and sections.
+Read `must`, `never`, and `required` as contracts; `prefer` is the default. Load this entrypoint and
+at most three role-local references initially; record the unresolved risk before loading a fourth.
+
+## Execution discipline
+
+Before editing, record acceptance/risks, baseline, owners/paths, prerequisites, and proof. Batch
+bounded reads and patches; keep logs as artifacts. Poll unchanged work after 30–60 seconds. Run
+focused proof, then one complete required lane on the final frozen diff; reuse valid evidence.
+
+## Fast path for settled bugs
+
+Reproduce before editing; trace the immediate owner, consumer, effect, and test seam, then load at most
+one focused reference. Escalate only when the trace proves ownership, source-of-truth, or workflow
+topology is unresolved. Stop when focused and required runtime proof are green.
 
 ## Lean implementation contract
 
@@ -44,17 +56,18 @@ requirement, credible named safety/privacy/data-loss scenario, or two current co
 variation. Admit routine owner-local detail with that evidence; return architecture contradictions
 to the Architect.
 
-For SwiftStateMachine work, read
+For SwiftStateMachine work that changes machine topology or event/output behavior, read
 [State-machine feature design](references/state-machine-features.md) before editing. Every machine
 factory receives one owner-named `Outputs` value. Each semantic output is a `Sendable` struct whose
 `callAsFunction` returns the side-effect function consumed by SwiftStateMachine; it never returns the
 DSL `Output` value. Keep the `Output(sideEffect: outputs.operation(...))` declaration visible beside
 its transition. Select zero, one, or many events from machine decisions, not internal call count.
+Do not load the machine reference for local presentation state, ordinary callbacks/bindings, or typed
+navigation when machine behavior is unchanged.
 
-When accepted work changes durable product behavior, update the repository product contract in the
-same focused change and report `PRODUCT-CONTRACT-DELTA: NONE | <rule IDs>`. Do not promote modules,
-APIs, topology, DI, retry mechanics, or tests into product policy unless the user makes the mechanism
-contractual.
+When accepted work changes durable behavior, update the product contract in the same focused change
+and report `PRODUCT-CONTRACT-DELTA: NONE | <rule IDs>`. Do not promote implementation mechanics into
+product policy unless the user makes them contractual.
 
 ## Resource routing
 
@@ -62,7 +75,10 @@ contractual.
 | --- | --- |
 | Swift API design, values, effects, capabilities, protocols/classes | [Production Swift](references/production-swift.md) |
 | Swift 6 isolation, tasks, actors, streams, cancellation | [Concurrency and lifecycle](references/concurrency-and-lifecycle.md) |
-| SwiftStateMachine implementation or topology refactor | [State-machine feature design](references/state-machine-features.md) |
+| SwiftStateMachine or navigation-area composition/refactor | [State-machine feature design](references/state-machine-features.md) |
+| Async identity, retry, correlation, replacement, stale results | [State-machine interleavings](references/state-machine-interleavings.md) |
+| Bug triage and reproduction | [Triage and reproduction](references/triage-and-reproduction.md) |
+| SwiftUI presentation, navigation, and controller lifetime | [Presentation and lifetime](references/presentation-and-lifetime.md) |
 | SwiftUI, Observation, accessibility, localization | [SwiftUI production](references/swiftui-production.md) |
 | Unit/integration/workflow tests and safe refactoring | [Testing and refactoring](references/testing-and-refactoring.md) |
 | Reproduction, LLDB, profiling, leaks, performance | [Debugging and performance](references/debugging-and-performance.md) |
@@ -71,41 +87,29 @@ contractual.
 | Apple platforms, App Intents, extensions, runtime/security | [Apple platform validation](references/apple-platform-validation.md) |
 | Lifecycle transition without a complete local contract | [Swift handoff contract](references/handoff-contract.md) |
 
-Use `assets/ProductionExample` as a compiled teaching fixture only. When a material uncertainty
-remains, load the matching installed specialization in the current agent: `swift-concurrency` for
-isolation, `swiftui-expert` or `mobile-ios-design` for UI/interaction, the App Intents skill for
-system surfaces, or the debugger/performance skills for runtime evidence. Specialists provide depth;
-do not spawn or switch roles for specialization. If required evidence is otherwise unobtainable, read
+Use `assets/ProductionExample` only as a teaching fixture. Role-local references are the default.
+Load a specialist only for a concrete unresolved API/runtime question or missing proof; it
+supplements rather than duplicates the role. If evidence remains unobtainable, read
 [Missing specialist installation](references/specialist-skill-installation.md).
 
 ## Workflow
 
-1. **Make the contract executable.** Identify accepted behavior, product rule IDs/delta, required and
-   deliberately unmodeled adverse paths, effects, lifetime, UI quality, and acceptance tests. Read
-   existing tests and perform a focused architecture-contradiction check before editing.
-2. **Implement at the owner.** Prefer pure value transformations followed by small injected effect
-   capabilities. Keep generic SDK wrappers in Frameworks, mapping in Datasources, behavior in
-   Features, destinations in Navigation, and assembly in composition.
-3. **Own concurrency and presentation.** Establish isolation before async work; use structured task
-   lifetime and cancellation/stale-result protection only where the workflow needs it. Keep SwiftUI
-   as projection and interaction, with stable identity, typed navigation, localization, and
-   accessibility.
-4. **Subtract.** Remove unearned wrappers, speculative extension/recovery points, duplicated policy,
-   and tests that freeze private decomposition. Preserve named invariants and behaviorally distinct
-   states even when they share a UI projection.
-5. **Verify and converge.** Format touched Swift, run the narrowest checks proving changed behavior
-   plus mandatory repository gates, inspect consumers and the final scoped diff, and distinguish
-   passed, failed, blocked, and not-run evidence. Compilation does not replace required runtime proof.
+1. **Contract.** Identify behavior, rule delta, adverse paths, effects, lifetime, UI quality, and tests;
+   read owner tests and check architecture contradictions.
+2. **Implement.** Change the owner with small capabilities, preserving Frameworks/Datasources/
+   Features/Navigation/composition boundaries.
+3. **Own lifetime.** Establish isolation, structured cancellation, stable identity, typed navigation,
+   localization, and accessibility only where required.
+4. **Subtract and verify.** Remove unearned mechanisms. For stateful workflows, complete the applicable
+   pre-review interleaving matrix, then run focused checks, mandatory gates, and required runtime proof.
 
 ## Deliverable and handoff
 
-Return implemented requirements by owner/rule ID, changed files and public/dependency deltas, exact
-commands/results, blockers and residual risk, cold-audit result, `PRODUCT-CONTRACT-DELTA`,
-`COMPLEXITY-DELTA`, `SUBTRACTIVE-PASS`, and `ENVELOPE-DEVIATIONS`.
+Return requirements by owner/rule ID, changed files and public/dependency deltas, exact results,
+blockers/residual risk, cold-audit result, `PRODUCT-CONTRACT-DELTA`, `COMPLEXITY-DELTA`,
+`SUBTRACTIVE-PASS`, and `ENVELOPE-DEVIATIONS`.
 
-For direct implementation, return the normal report. When an inter-agent lifecycle requires a
-transition, use the repository's complete local handoff contract; otherwise read the local
-[Swift handoff contract](references/handoff-contract.md) and emit exactly one `SWIFT-HANDOFF/1`
-block. Route completed implementation to `SWIFT_REVIEWER`, an architecture contradiction to
-`SWIFT_ARCHITECT`, and missing authority or external state to `ROOT`. For repository-classified
-`TRIVIAL` work, return the normal report so Root can perform the required focused self-review.
+For direct implementation, return the normal report. For a lifecycle transition, use the repository
+contract or local [Swift handoff contract](references/handoff-contract.md) and emit one
+`SWIFT-HANDOFF/1` block. Route completion to `SWIFT_REVIEWER`, architecture contradictions to
+`SWIFT_ARCHITECT`, and missing authority/external state to `ROOT`.

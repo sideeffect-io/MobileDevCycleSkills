@@ -27,6 +27,11 @@ by scoped evidence and concrete impact.
   or authorizer;
 - public implementation type or setter added only to satisfy compilation/tests;
 - feature owns routes, parent prepares child-private context, child receives repository/SDK object;
+- one app-level Navigation machine imports every leaf Feature and owns unrelated area-private
+  routes/presentations instead of composing stable navigation-area owners;
+- app-wide navigation chrome or context selection is duplicated across Features/areas rather than
+  owned once by root navigation, or an area target exists only for symmetry with no accepted area,
+  consumer, or dependency firewall;
 - Feature/Navigation output constructs a concrete provider, or composition absorbs output sequencing
   or result-to-event mapping;
 - multiple state/runtime owners, unstable factory creation, undocumented singleton lifetime;
